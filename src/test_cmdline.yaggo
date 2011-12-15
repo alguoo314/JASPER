@@ -1,0 +1,9 @@
+purpose = "Hello the world program"
+description = "Says hello to the world
+
+Use option to make it more personal!
+"
+
+option("n", "name") {
+  description "Say hello to this individual"
+  string; multiple }
