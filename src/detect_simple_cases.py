@@ -7,10 +7,16 @@ import csv
 import dna_jellyfish as jf
 #from timer import Timer
 
-def main(contigs,query_path,k,test,fix,fout,tout,fixedout):
+def main(contigs,query_path,k,test,fix,fout,tout,fixedout,database,thre):
     try:
         #t = Timer()
-        threshold,db = jellyfish(contigs,k)
+        threshold = thre
+        db = database
+        if contigs != None and database == None:
+            threshold,db = jellyfish(contigs,k,thre)
+        if (contigs == None and (database == None or thre == None)) or (contigs != None and database != None): 
+            sys.stderr.write("Wrong arguments. One and only one of 'contigs'and 'database' argument should be given. And if contigs is not given, database and threshold must both be given.")
+            return
         print("Threshold =  {}".format(threshold))
         qf  = jf.QueryMerFile(db)
         seq_dict = parse_fasta(query_path)                                                                                                                 
@@ -22,7 +28,7 @@ def main(contigs,query_path,k,test,fix,fout,tout,fixedout):
 
         for seqname,seq in seq_dict.items():
             #t.start()
-            print(seqname+":")
+            #print(seqname+":")
             rare_occurance = 0
             wrong_kmers_list = []
             good_before = -1 #index of the last guaranteed good base before the mismatch                                                                                     
@@ -53,8 +59,8 @@ def main(contigs,query_path,k,test,fix,fout,tout,fixedout):
                     if j == -1: #even the first kmer is bad                                                                                        
                         good_before = -1 
                                                                                   
-                    i = good_before +1 #skip to the first possible bad base
-                    while qf[jf.MerDNA(seq[i:k+i]).get_canonical()] <= threshold:
+                    #go forward back to i
+                    while qf[jf.MerDNA(seq[i:k+i]).get_canonical()] < threshold:
                         i+=1
                     good_after = i #the first base of the first good kmer after the mismatch
                     num_bad_kmers = good_after-good_before-2+k
@@ -121,20 +127,24 @@ def main(contigs,query_path,k,test,fix,fout,tout,fixedout):
 
 
 
-def jellyfish(contigs,k):
+def jellyfish(contigs,k,thre):
     count = math.inf
     threshold = 0
-    db_name = os.path.splitext(os.path.basename(contigs))[0] +".jf"
-    os.system("jellyfish count -s 300000000 -t 32 -m {} -C -o {} {}".format(k,db_name,contigs))
-    os.system("jellyfish histo {}> {}".format(db_name,db_name+".csv"))
+    db_name = os.path.splitext(os.path.basename(contigs[0]))[0]
+    contigs = ' '.join(contig_file for contig_file in contigs)
+    #print(contigs)
+    os.system("jellyfish count -s 300000000 -t 32 -m {} -C -o {} {}".format(k,db_name+".jf",contigs))
+    os.system("jellyfish histo -t 32 {}> {}".format(db_name+".jf",db_name+".csv"))
     with open(db_name+".csv",'r') as histo:
+        if thre != None:
+            return thre, db_name+".csv"
         csvreader = csv.reader(histo,delimiter=' ')
         for row in csvreader:
             if count >= int(row[-1]):
                 count = int(row[-1])
                 threshold = int(int(row[0])/2)
             else: #found the local min
-                return threshold,db_name
+                return threshold,db_name+".csv"
                 
 
 
@@ -263,10 +273,10 @@ def parse_fasta(query_file):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    #parser.add_argument("--db", help="The path to the .jf  database file")
-    parser.add_argument("--contigs", help="The path to the .fasta file containing the contigs to build the jellyfish database")
+    parser.add_argument("--db", default = None, help="The path to the .jf  database file. Not needed if --contigs is given.")
+    parser.add_argument("--contigs",nargs='+',default = None, help="The path to the .fasta file(s） containing the contigs to build the jellyfish database. Not needed if --db is provided")
     parser.add_argument("-q","--query", help = "The path to the .fasta query file")
-    #parser.add_argument("-thr","--threshold", type=int,help = "The threshold for a bad kmer")
+    parser.add_argument("-thr","--threshold", type=int, default = None, help = "The threshold for a bad kmer.")
     parser.add_argument("-k","--ksize", type=int,help = "The kmer size")
     parser.add_argument("--test", action='store_true',help = "Print loc of bad kmers, total num of bad kmers, and estimate for Q")
     parser.add_argument("--fix", action='store_true', help="Output the index of fixed bases and output the new sequence")
@@ -274,4 +284,4 @@ if __name__ == '__main__':
     parser.add_argument("-fo","--fixedout",default = "fixed_seq.fasta",help = "The output file containing the fixed sequence")
     parser.add_argument("--tout", default = "tout.csv", help = "The output file containing the locations of bad kmers")
     args = parser.parse_args()
-    main(args.contigs,args.query,args.ksize,args.test,args.fix,args.fout,args.tout,args.fixedout)
+    main(args.contigs,args.query,args.ksize,args.test,args.fix,args.fout,args.tout,args.fixedout,args.db,args.threshold)
