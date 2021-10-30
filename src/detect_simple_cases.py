@@ -15,7 +15,7 @@ def main(contigs,query_path,k,test,fix,fout,tout,fixedout,database,thre):
         if contigs != None and database == None:
             threshold,db = jellyfish(contigs,k,thre)
         if (contigs == None and (database == None or thre == None)) or (contigs != None and database != None): 
-            sys.stderr.write("Wrong arguments. One and only one of 'contigs'and 'database' argument should be given. And if contigs is not given, database and threshold must both be given.")
+            sys.stderr.write("Wrong arguments. One and only one between the contigs and database argument should be given. And if contigs is not given, database and threshold must both be given.")
             return
         print("Threshold =  {}".format(threshold))
         qf  = jf.QueryMerFile(db)
@@ -28,13 +28,13 @@ def main(contigs,query_path,k,test,fix,fout,tout,fixedout,database,thre):
 
         for seqname,seq in seq_dict.items():
             #t.start()
-            #print(seqname+":")
+            print(seqname+":")
             rare_occurance = 0
-            wrong_kmers_list = []
             good_before = -1 #index of the last guaranteed good base before the mismatch                                                                                     
             backtracked = False
             i = 0 #first k mer at position 0                                                                                                       
-            while i < len(seq)-k+1: #k is 25 :                                                                                                    
+            while i < len(seq)-k+1: #k is 25 : 
+                wrong_kmers_list = []                                                                                                   
                 #make kmers and check occurances   
                 match = re.match("^[ACTGactg]*$",seq[i])
                 if match is None:
@@ -45,29 +45,49 @@ def main(contigs,query_path,k,test,fix,fout,tout,fixedout,database,thre):
                 mer_string = seq[i:k+i]
                 mer = jf.MerDNA(mer_string).get_canonical()
                 occurrance = qf[mer]
+                count_record = []
                 if occurrance < threshold:
                     rare_occurance += 1
+                    count_record.append(occurrance)
                     if backtracked == True:
                         i+=1
                         continue
                     j = i-1
                     backtracked = True
-                    while qf[jf.MerDNA(seq[j:k+j]).get_canonical()] < threshold and j>=0:
+                    occurrance = qf[jf.MerDNA(seq[j:k+j]).get_canonical()] 
+                    while occurrance < threshold and j>=0:
+                        count_record.insert(0,occurrance)
                         j = j-1
                         rare_occurance += 1
+                        occurrance = qf[jf.MerDNA(seq[j:k+j]).get_canonical()]
                     good_before = j+k-1 #the end base of a good kmer  
+                    for temp in range(max(0,j-5),j):
+                        count_record.insert(0,qf[jf.MerDNA(seq[temp:k+temp]).get_canonical()])
                     if j == -1: #even the first kmer is bad                                                                                        
                         good_before = -1 
-                                                                                  
+                    kmer_count = qf[jf.MerDNA(seq[i:k+i]).get_canonical()]                                                            
                     #go forward back to i
-                    while qf[jf.MerDNA(seq[i:k+i]).get_canonical()] < threshold:
+                    while kmer_count < threshold:
                         i+=1
+                        kmer_count = qf[jf.MerDNA(seq[i:k+i]).get_canonical()]
+                        count_record.append(kmer_count)
+                        
                     good_after = i #the first base of the first good kmer after the mismatch
-                    num_bad_kmers = good_after-good_before-2+k
+
+                    #A kmer is bad if it is below the threshold AND its count is less than 1/2 of the moving average of 5 good k-mers before it.
+                    a = 0
+                    if j < 5:
+                        a = 4-j
+                    for temp in range(5,len(count_record)-1): #the last item in the count_record_list is a good kmer
+                        if count_record[temp] < 0.5*sum(count_record[temp-5:temp])/5:
+                            wrong_kmers_list.append(temp+j+1-5+a)
+                    num_below_thres_kmers = good_after-good_before-2+k
                     to_be_fixed = seq[max(0,good_before-k+2):good_after+k-1]
-                    wrong_kmers_list.extend([*range(max(0,good_before-k+2),good_after)])
+                        
+                    #wrong_kmers_list.extend([*range(max(0,good_before-k+2),good_after)])
+                    
                     if fix == True:
-                        seq,fixed_base = fixing_sid(seq,to_be_fixed,k,threshold,qf,num_bad_kmers,good_before,good_after) #fix simple sub/insert/del cases
+                        seq,fixed_base = fixing_sid(seq,to_be_fixed,k,threshold,qf,num_below_thres_kmers,good_before,good_after) #fix simple sub/insert/del cases
                         if fixed_base != "nN":
                            fixed_bases_list.append([seqname,good_after-1,fixed_base]) 
                     
@@ -80,6 +100,8 @@ def main(contigs,query_path,k,test,fix,fout,tout,fixedout,database,thre):
             
                     
             seqs.append(seq)
+            for temp in wrong_kmers_list:
+                print(qf[jf.MerDNA(seq[temp:k+temp]).get_canonical()])
             wrong_kmers_dict[seqname] = wrong_kmers_list
             total_wrong_kmers += len(wrong_kmers_list)
             total_kmers += len(seq)-k+1
@@ -142,16 +164,16 @@ def jellyfish(contigs,k,thre):
         for row in csvreader:
             if count >= int(row[-1]):
                 count = int(row[-1])
-                threshold = int(int(row[0])/2)
+                threshold = int(int(row[0])*math.log(2))
             else: #found the local min
-                return threshold,db_name+".csv"
+                return threshold,db_name+".jf"
                 
 
 
 
-def fixing_sid(seq,to_be_fixed,k,threshold,qf,num_bad_kmers,good_before,good_after):
+def fixing_sid(seq,to_be_fixed,k,threshold,qf,num_below_thres_kmers,good_before,good_after):
     fixed_base = "nN"
-    if num_bad_kmers == k: #substitution or insertion
+    if num_below_thres_kmers == k: #substitution or insertion
         b = fix_sub(to_be_fixed,k,threshold,qf)
         if b !=  None:
             #print("Index {} should be {} instead of {}".format(good_after-1,b,seq[good_after-1]))
@@ -164,7 +186,7 @@ def fixing_sid(seq,to_be_fixed,k,threshold,qf,num_bad_kmers,good_before,good_aft
                 seq = seq[:good_after-1] + seq[good_after:]
                 
                                 
-    elif num_bad_kmers == k-1: #deletion by one or more bases
+    elif num_below_thres_kmers == k-1: #deletion by one or more bases
        removed_bases = fix_del(to_be_fixed,k,threshold,qf)
        if removed_bases != None:
            seq = seq[:good_after]+removed_bases+seq[good_after:]
