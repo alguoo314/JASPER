@@ -32,4 +32,4 @@ all_tests_SOURCES = unittests/gtest/gtest-all.cc unittests/gtest/gtest_main.cc u
 
 all_tests_SOURCES += unittests/test_trivial.cc
 
-dist_bin_SCRIPTS = src/trysep23.py src/detect_simple_cases_oct10.py src/detect_simple_cases_oct12.py src/detect_simple_cases.py
+dist_bin_SCRIPTS = src/trysep23.py src/detect_simple_cases_oct10.py src/detect_simple_cases_oct12.py src/detect_simple_cases.py src/rolling_version1.py src/rolling_version2.py src/non_rolling_version.py
