@@ -21,6 +21,7 @@ def main(contigs,query_path,k,test,fix,fout,tout,fixedout,database,thre):
         qf  = jf.QueryMerFile(db)
         seq_dict = parse_fasta(query_path)                                                                                                                 
         wrong_kmers_dict = {}
+        wrong_kmers_list = []
         seqs = []
         fixed_bases_list = []
         total_wrong_kmers = 0
@@ -33,8 +34,7 @@ def main(contigs,query_path,k,test,fix,fout,tout,fixedout,database,thre):
             good_before = -1 #index of the last guaranteed good base before the mismatch                                                                                     
             backtracked = False
             i = 0 #first k mer at position 0                                                                                                       
-            while i < len(seq)-k+1: #k is 25 : 
-                wrong_kmers_list = []                                                                                                   
+            while i < len(seq)-k+1: #k is 25 :                                                                                                    
                 #make kmers and check occurances   
                 match = re.match("^[ACTGactg]*$",seq[i])
                 if match is None:
@@ -86,7 +86,7 @@ def main(contigs,query_path,k,test,fix,fout,tout,fixedout,database,thre):
                         good_before +=1
                     print() #testing purpose
                     
-                    num_below_thres_kmers = good_after-good_before-2+k
+                    #num_below_thres_kmers = good_after-good_before-2+k
                     to_be_fixed = seq[max(0,good_before-k+2):good_after+k-1]
                         
                     wrong_kmers_list.extend([*range(max(0,good_before-k+2),good_after)])
@@ -97,7 +97,7 @@ def main(contigs,query_path,k,test,fix,fout,tout,fixedout,database,thre):
                     print()
                     print("Next iteration")
                     if fix == True:
-                        seq,fixed_base = fixing_sid(seq,to_be_fixed,k,threshold,qf,num_below_thres_kmers,good_before,good_after) #fix simple sub/insert/del cases
+                        seq,fixed_base = fixing_sid(seq,to_be_fixed,k,threshold,qf,wrong_kmers_list,good_before,good_after) #fix simple sub/insert/del cases
                         if fixed_base != "nN":
                            fixed_bases_list.append([seqname,good_after-1,fixed_base]) 
                     

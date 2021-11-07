@@ -88,7 +88,7 @@ def main(contigs,query_path,k,test,fix,fout,tout,fixedout,database,thre,rolling=
                             
                     
                     print()
-                    num_below_thres_kmers = good_after-good_before-2+k
+                    #num_below_thres_kmers = good_after-good_before-2+k
                     to_be_fixed = seq[max(0,good_before-k+2):good_after+k-1]
 
                     print("Bad kmers:")
@@ -100,7 +100,7 @@ def main(contigs,query_path,k,test,fix,fout,tout,fixedout,database,thre,rolling=
                     wrong_kmers_list.extend([*range(max(0,good_before-k+2),good_after)])
                     
                     if fix == True:
-                        seq,fixed_base = fixing_sid(seq,to_be_fixed,k,threshold,qf,num_below_thres_kmers,good_before,good_after) #fix simple sub/insert/del cases
+                        seq,fixed_base = fixing_sid(seq,to_be_fixed,k,threshold,qf,wrong_kmers_list,good_before,good_after) #fix simple sub/insert/del cases
                         if fixed_base != "nN":
                            fixed_bases_list.append([seqname,good_after-1,fixed_base]) 
                     
