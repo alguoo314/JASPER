@@ -7,17 +7,19 @@ import csv
 import dna_jellyfish as jf
 #from timer import Timer
 
-def main(contigs,query_path,k,test,fix,fout,tout,fixedout,database,thre):
+def main(contigs,query_path,k,test,fix,fout,tout,fixedout,database,thre,rep_thre):
     try:
         #t = Timer()
         threshold = thre
+        rep_region_threshold = rep_thre
         db = database
         if contigs != None and database == None:
-            threshold,db = jellyfish(contigs,k,thre)
+            threshold,rep_region_threshold,db = jellyfish(contigs,k,thre,rep_thre)
         if (contigs == None and (database == None or thre == None)) or (contigs != None and database != None): 
             sys.stderr.write("Wrong arguments. One and only one between the contigs and database argument should be given. And if contigs is not given, database and threshold must both be given.")
             return
         print("Threshold =  {}".format(threshold))
+        print("Threshold for Repetitive Region=  {}".format(rep_region_threshold))
         qf  = jf.QueryMerFile(db)
         seq_dict = parse_fasta(query_path)                                                                                                                 
         wrong_kmers_dict = {}
@@ -33,7 +35,9 @@ def main(contigs,query_path,k,test,fix,fout,tout,fixedout,database,thre):
             rare_occurance = 0
             good_before = -1 #index of the last guaranteed good base before the mismatch                                                                                     
             backtracked = False
-            i = 0 #first k mer at position 0                                                                                                       
+            i = 0 #first k mer at position 0
+            #fixed_bases_list = []
+            wrong_kmers_list = []                                                                                                       
             while i < len(seq)-k+1: #k is 25 :                                                                                                    
                 #make kmers and check occurances   
                 match = re.match("^[ACTGactg]*$",seq[i])
@@ -67,6 +71,7 @@ def main(contigs,query_path,k,test,fix,fout,tout,fixedout,database,thre):
                     print(jf.MerDNA(seq[j:k+j]).get_canonical()) 
                     kmer_count = qf[jf.MerDNA(seq[i:k+i]).get_canonical()]                                                            
                     #go forward back to i
+
                     if j == -1: #even the first kmer is bad                                                                                                                                 
                         good_before = -1
                     while kmer_count < threshold:
@@ -75,12 +80,17 @@ def main(contigs,query_path,k,test,fix,fout,tout,fixedout,database,thre):
                         
                     good_after = i #the first base of the first good kmer after the mismatch
 
-                    #A kmer is bad if it is below the threshold AND its count is less than 1/2 of the moving average of rolling_num good k-mers before it.
-                    
+                    #A kmer is bad if it is below the threshold AND its count is less than 1/2 of the moving average of rolling_num good k-mers before it AND its previous good kmer is not from a repetitive region.
+                    if prev_good_count > rep_region_threshold:
+                        print("Repetitive Region!")
+                        i=good_after
+                        continue
+                    print("Good before Index start: {}".format(good_before-k+2))
                     while  qf[jf.MerDNA(seq[good_before-k+2:good_before+2]).get_canonical()] > prev_good_count/2 and good_before-k+1 < good_after:
                         if good_before == -1:
                             break
                         prev_good_count = qf[jf.MerDNA(seq[good_before-k+2:good_before+2]).get_canonical()]
+                        #print("Index: {}".format(good_before-k+2))
                         print(prev_good_count,end=" ") #testing purpose
                         print(jf.MerDNA(seq[good_before-k+2:good_before+2]).get_canonical())
                         good_before +=1
@@ -91,13 +101,14 @@ def main(contigs,query_path,k,test,fix,fout,tout,fixedout,database,thre):
                         
                     wrong_kmers_list.extend([*range(max(0,good_before-k+2),good_after)])
                     print("Bad kmers:")
+                    print("Good before, good after = {} {}".format(good_before-k+2,good_after-1))
                     for ind in range(max(0,good_before-k+2),good_after):
                          print(qf[jf.MerDNA(seq[ind:k+ind]).get_canonical()],end = " ") #testing purpose
                     print()
                     print()
                     print("Next iteration")
                     if fix == True:
-                        seq,fixed_base = fixing_sid(seq,to_be_fixed,k,threshold,qf,wrong_kmers_list,good_before,good_after) #fix simple sub/insert/del cases
+                        seq,fixed_base = fixing_sid(seq,to_be_fixed,k,threshold,qf,len([*range(max(0,good_before-k+2),good_after)]),good_before,good_after) #fix simple sub/insert/del cases
                         if fixed_base != "nN":
                            fixed_bases_list.append([seqname,good_after-1,fixed_base]) 
                     
@@ -157,7 +168,7 @@ def main(contigs,query_path,k,test,fix,fout,tout,fixedout,database,thre):
 
 
 
-def jellyfish(contigs,k,thre):
+def jellyfish(contigs,k,thre,rep_thre):
     count = math.inf
     threshold = 0
     db_name = os.path.splitext(os.path.basename(contigs[0]))[0]
@@ -165,16 +176,31 @@ def jellyfish(contigs,k,thre):
     #print(contigs)
     os.system("jellyfish count -s 300000000 -t 32 -m {} -C -o {} {}".format(k,db_name+".jf",contigs))
     os.system("jellyfish histo -t 32 {}> {}".format(db_name+".jf",db_name+".csv"))
+    found_thres = False
     with open(db_name+".csv",'r') as histo:
-        if thre != None:
-            return thre, db_name+".csv"
+        if thre != None and rep_thre!=None:
+            return thre,rep_thre,db_name+".csv"
         csvreader = csv.reader(histo,delimiter=' ')
         for row in csvreader:
-            if count >= int(row[-1]):
+            if count >= int(row[-1]) and found_thres == False:
                 count = int(row[-1])
-                threshold = int(int(row[0])*math.log(2))
-            else: #found the local min
-                return threshold,db_name+".jf"
+                #threshold = int(int(row[0])*math.log(2))
+                threshold = int(int(row[0])/2)
+            elif found_thres == False: #found the local min, start to find next local max
+                found_thres = True
+                count = int(row[-1])
+            else:
+                #repetitive_seq_thr = count/2
+                repetitive_seq_thr = int(int(row[0])*2)
+                if thre == None and rep_thre!=None:
+                    return threshold,rep_thre,db_name+".jf"
+                elif thre != None and rep_thre==None:
+                    return thre,repetitive_seq_thr,db_name+".jf"
+                elif thre == None and rep_thre==None:
+                    return threshold,repetitive_seq_thr,db_name+".jf"
+                else:
+                    print("Error")
+                    return(None)
                 
 
 
@@ -306,7 +332,8 @@ if __name__ == '__main__':
     parser.add_argument("--db", default = None, help="The path to the .jf  database file. Not needed if --contigs is given.")
     parser.add_argument("--contigs",nargs='+',default = None, help="The path to the .fasta file(s） containing the contigs to build the jellyfish database. Not needed if --db is provided")
     parser.add_argument("-q","--query", help = "The path to the .fasta query file")
-    parser.add_argument("-thr","--threshold", type=int, default = None, help = "The threshold for a bad kmer.")
+    parser.add_argument("-thre","--threshold", type=int, default = None, help = "The threshold for a bad kmer.")
+    parser.add_argument("-rep_thre", type=int, default = None, help = "The threshold  of occurrance for a kmer at a repeitive region.")
     parser.add_argument("-k","--ksize", type=int,help = "The kmer size")
     parser.add_argument("--test", action='store_true',help = "Print loc of bad kmers, total num of bad kmers, and estimate for Q")
     parser.add_argument("--fix", action='store_true', help="Output the index of fixed bases and output the new sequence")
@@ -314,4 +341,4 @@ if __name__ == '__main__':
     parser.add_argument("-fo","--fixedout",default = "fixed_seq.fasta",help = "The output file containing the fixed sequence")
     parser.add_argument("--tout", default = "tout.csv", help = "The output file containing the locations of bad kmers")
     args = parser.parse_args()
-    main(args.contigs,args.query,args.ksize,args.test,args.fix,args.fout,args.tout,args.fixedout,args.db,args.threshold)
+    main(args.contigs,args.query,args.ksize,args.test,args.fix,args.fout,args.tout,args.fixedout,args.db,args.threshold,args.rep_thre)
