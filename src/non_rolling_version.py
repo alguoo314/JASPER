@@ -110,7 +110,8 @@ def main(contigs,query_path,k,test,fix,fout,tout,fixedout,database,thre,rep_thre
                     if fix == True:
                         seq,fixed_base = fixing_sid(seq,to_be_fixed,k,threshold,qf,len([*range(max(0,good_before-k+2),good_after)]),good_before,good_after) #fix simple sub/insert/del cases
                         if fixed_base != "nN":
-                           fixed_bases_list.append([seqname,good_after-1,fixed_base]) 
+                            fixed_bases_list.append([seqname,good_after-1,fixed_base])
+                            print([seqname,good_after-1,fixed_base])
                     
                 else: #good kmer                                                                                                                   
                     #if rare_occurance >=25: #there is a bad kmer before it                                                                                                                                                                                   
