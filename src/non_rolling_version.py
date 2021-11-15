@@ -190,8 +190,7 @@ def jellyfish(contigs,k,thre,rep_thre):
             elif found_thres == False: #found the local min, start to find next local max
                 found_thres = True
                 count = int(row[-1])
-            else:
-                #repetitive_seq_thr = count/2
+            elif count >= int(row[-1]) and found_thres == True:
                 repetitive_seq_thr = int(int(row[0])*2)
                 if thre == None and rep_thre!=None:
                     return threshold,rep_thre,db_name+".jf"
@@ -202,6 +201,8 @@ def jellyfish(contigs,k,thre,rep_thre):
                 else:
                     print("Error")
                     return(None)
+            else:
+                count = int(row[-1])
                 
 
 
