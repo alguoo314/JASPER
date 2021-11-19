@@ -37,7 +37,6 @@ def main(contigs,query_path,k,test,fix,fout,tout,fixedout,database,thre,rep_thre
             good_before = -1 #index of the last guaranteed good base before the mismatch                                                                                     
             backtracked = False
             i = 0 #first k mer at position 0
-            #fixed_bases_list = []
             wrong_kmers_list = []                                                                                                       
             while i < len(seq)-k+1: #k is 25 :                                                                                                    
                 #make kmers and check occurances   
@@ -61,7 +60,6 @@ def main(contigs,query_path,k,test,fix,fout,tout,fixedout,database,thre,rep_thre
                     backtracked = True
                     occurrance = qf[jf.MerDNA(seq[j:k+j]).get_canonical()] 
                     while occurrance < threshold and j>=0:
-                        #count_record.insert(0,occurrance)
                         j = j-1
                         rare_occurance += 1
                         occurrance = qf[jf.MerDNA(seq[j:k+j]).get_canonical()]
@@ -91,13 +89,11 @@ def main(contigs,query_path,k,test,fix,fout,tout,fixedout,database,thre,rep_thre
                         if good_before == -1:
                             break
                         prev_good_count = qf[jf.MerDNA(seq[good_before-k+2:good_before+2]).get_canonical()]
-                        #print("Index: {}".format(good_before-k+2))
                         print(prev_good_count,end=" ") #testing purpose
                         print(jf.MerDNA(seq[good_before-k+2:good_before+2]).get_canonical())
                         good_before +=1
                     print() #testing purpose
                     
-                    #num_below_thres_kmers = good_after-good_before-2+k
                     to_be_fixed = seq[max(0,good_before-k+2):good_after+k-1]
                         
                     wrong_kmers_list.extend([*range(max(0,good_before-k+2),good_after)])
@@ -115,17 +111,15 @@ def main(contigs,query_path,k,test,fix,fout,tout,fixedout,database,thre,rep_thre
                     print()
                     print("Next iteration")
                     if fix == True:
-                        seq,fixed_base,fixed_ind, hetero = fixing_sid(seq,to_be_fixed,k,threshold,qf,len([*range(max(0,good_before-k+2),good_after)]),good_before,good_after) #fix simple sub/insert/del cases
+                        seq,fixed_base,original,fixed_ind = fixing_sid(seq,to_be_fixed,k,threshold,qf,len([*range(max(0,good_before-k+2),good_after)]),good_before,good_after) #fix simple sub/insert/del cases
                         if fixed_base != "nN":
-                            if hetero == False or len(fixed_ind) == 1:
-                                fixed_bases_list.append([seqname,fixed_ind[0],fixed_base])
+                            if len(fixed_ind) == 1:
+                                fixed_bases_list.append([seqname,fixed_ind[0],fixed_base,original])
                             else:
-                                fixed_bases_list.append([seqname,fixed_ind[0],fixed_base[0]])
-                                fixed_bases_list.append([seqname,fixed_ind[1],fixed_base[1]])
-                            #print([seqname,good_after-1,fixed_base])
+                                fixed_bases_list.append([seqname,fixed_ind[0],fixed_base[0],original[0]])
+                                fixed_bases_list.append([seqname,fixed_ind[1],fixed_base[1],original[1]])
                     
-                else: #good kmer                                                                                                                   
-                    #if rare_occurance >=25: #there is a bad kmer before it                                                                                                                                                                                   
+                else: #good kmer                                                                                                                                                      
                     backtracked = False
                     good_before = i+k-1 #the end base of a good kmer                                                                                       
                     i += k
@@ -163,7 +157,7 @@ def main(contigs,query_path,k,test,fix,fout,tout,fixedout,database,thre,rep_thre
                     of.write(seqs[i])
                     of.write("\n")
                     i+=1
-            base_fields = ['Contig', 'Base_coord', 'Operation']
+            base_fields = ['Contig', 'Base_coord', 'Original','Mutated']
             with open(fout,'w') as csvf:
                 csvwriter = csv.writer(csvf,delimiter=' ')
                 csvwriter.writerow(base_fields)
@@ -221,47 +215,57 @@ def jellyfish(contigs,k,thre,rep_thre):
 def fixing_sid(seq,to_be_fixed,k,threshold,qf,num_below_thres_kmers,good_before,good_after):
     try:
         fixed_base = "nN"
-        hetero = True
+        original = '-'
         fixed_ind = None
         if num_below_thres_kmers == k: #substitution or insertion
-            fixed_ind = [good_after-1]
             b = fix_sub(to_be_fixed,k,threshold,qf)
             if b !=  None:
-                #print("Index {} should be {} instead of {}".format(good_after-1,b,seq[good_after-1]))
-                seq = seq[:good_after-1] + b + seq[good_after:]
-                fixed_base = "s"+b
-            else:
-                b = fix_insert(to_be_fixed,k,threshold,qf)
-                if b != None:
+                original = "s"+seq[good_after-1]
+                temp  = seq[:good_after-1] + b + seq[good_after:]                                                           
+                seq = temp
+                fixed_base = b
+                fixed_ind = [good_after-1]
+            #else:
+                #b = fix_insert(to_be_fixed,k,threshold,qf)
+                #if b != None:
                     #print("{} was inserted as index {}, now removed".format(b,good_after-1))
-                    seq = seq[:good_after-1] + seq[good_after:]
-                    
+                    #original = "i"+seq[good_after-1]
+                    #seq = seq[:good_after-1] + seq[good_after:]
+                    #fixed_base = '-'
+                    #fixed_ind = [good_after-1]
                                     
-        if num_below_thres_kmers == k-1: #deletion by one or more bases
-           fixed_ind = [good_after-1]
-           removed_bases = fix_del(to_be_fixed,k,threshold,qf)
-           if removed_bases != None:
-               seq = seq[:good_after]+removed_bases+seq[good_after:]
+        #if num_below_thres_kmers == k-1: #deletion by one or more bases
+           #fixed_ind = [good_after-1]
+           #removed_bases = fix_del(to_be_fixed,k,threshold,qf)
+           #if removed_bases != None:
+               #original = "-"
+               #fixed_ind = [good_after-1]
+               #seq = seq[:good_after]+removed_bases+seq[good_after:]
                #print("{} was lost after index {}".format(removed_bases,good_after-1))
-               fixed_base = "d"+removed_bases
-           elif (seq[good_before] == seq[good_before+1]) and (fix_same_base_insertion(to_be_fixed,k,threshold,qf) == True):
+               #fixed_base = removed_bases
+           #elif (seq[good_before] == seq[good_before+1]) and (fix_same_base_insertion(to_be_fixed,k,threshold,qf) == True):
                #print("{}, the same base as the good base after it, was inserted. Now removed".format(seq[good_after-1]))
-               seq = seq[:good_after-1] + seq[good_after:]     
-               fixed_base = "i"+seq[good_after-1]
+               #original = "i"+seq[good_after-1]
+               #seq = seq[:good_after-1] + seq[good_after:]     
+               #fixed_base = "-"
         elif num_below_thres_kmers < k-1:
-            start,end,fixed_ind,s_or_e =  fixhetero(to_be_fixed,k,threshold,qf)
-            if fixed_ind !=  None:
-                hetero = True
-                for d in range(len(fixed_ind)):
-                    fixed_ind[d] += max(0,good_before-k+2)
-                #print("Index {} should be {} instead of {}".format(good_after-1,b,seq[good_after-1]))
-                seq =  seq[:good_before+1]+start+seq[good_before+2:good_after-1] + end + seq[good_after:]
+            start,end,s_or_e =  fixhetero(to_be_fixed,k,threshold,qf)
+            if s_or_e !=  None:
                 if s_or_e == "b": #b stands for both bases are changed
-                    fixed_base = ["s"+str(start),"s"+str(end)]
+                    original = ["s"+seq[good_after-1],"s"+seq[good_before+1]] #HIIII CHANGED                                         
+                    fixed_base = [str(start),str(end)]
+                    fixed_ind = [good_after-1,good_before+1]
                 elif s_or_e == "s": #starting base is changed
-                    fixed_base = "s"+str(start)
+                    original = "s"+seq[good_after-1]
+                    fixed_base = str(start)
+                    fixed_ind = [good_after-1]
                 else:
-                    fixed_base = "s"+str(end) 
+                    original = "s"+seq[good_before+1]
+                    fixed_base = str(end)
+                    fixed_ind = [good_before+1]
+                temp = seq[:good_after-1]+start+seq[good_after:good_before+1] + end + seq[good_before+2:]
+                seq =  temp
+        return seq,fixed_base, original, fixed_ind
     except:
          exception_type, exception_object, exception_traceback = sys.exc_info()
          line_number = exception_traceback.tb_lineno
@@ -274,39 +278,38 @@ def fixing_sid(seq,to_be_fixed,k,threshold,qf,num_below_thres_kmers,good_before,
     #else:
        #print("No available fixes for bad kmers from index {} to {}".format(good_before+1,good_after-1))
          
-    return seq,fixed_base,fixed_ind,hetero
                 
 def fixhetero(seq_to_be_fixed,k,threshold,qf):
     try:
         left_bad = seq_to_be_fixed[0]
-        
         right_bad = seq_to_be_fixed[len(seq_to_be_fixed)-k]
+        start = left_bad
+        end = right_bad
         for x in 'ACTG':
             for y in 'ACTG':
                 if x ==left_bad and y==right_bad:
                     continue
-                trial = x + seq_to_be_fixed[1:len(seq_to_be_fixed)-k+1]+y+seq_to_be_fixed[len(seq_to_be_fixed)-k+1:]
+                trial = x + seq_to_be_fixed[1:len(seq_to_be_fixed)-k]+y+seq_to_be_fixed[len(seq_to_be_fixed)-k+1:]
                 fixed = True
                 for i in  range(len(trial)-k):
                     if qf[jf.MerDNA(trial[i:k+i]).get_canonical()] < threshold:
                         fixed  = False
                         break
                 if fixed == True:
-                    print("yes")
                     start = x
                     end = y
                     if x == left_bad:
                         s_or_e = "e" 
-                        fixed_ind = [k-1]
+                        
                     elif y == right_bad:
                         s_or_e = "s"
-                        fixed_ind =[0]
+                        
                     else: #both changed
                         s_or_e = "b"
-                        fixed_ind = [0,k-1]
+                        
      
-                    return(start,end,fixed_ind,s_or_e)
-        return None,None,None,None
+                    return(start,end,s_or_e)
+        return start,end,None
     except:
          exception_type, exception_object, exception_traceback = sys.exc_info()
          line_number = exception_traceback.tb_lineno
