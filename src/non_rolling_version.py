@@ -5,6 +5,7 @@ import argparse
 import math
 import csv
 import dna_jellyfish as jf
+import textwrap
 #from timer import Timer
 
 def main(contigs,query_path,k,test,fix,fout,tout,fixedout,database,thre,rep_thre):
@@ -38,12 +39,12 @@ def main(contigs,query_path,k,test,fix,fout,tout,fixedout,database,thre,rep_thre
             backtracked = False
             i = 0 #first k mer at position 0
             wrong_kmers_list = []                                                                                                       
-            while i < len(seq)-k+1: #k is 25 :                                                                                                    
+            while i < len(seq)-k+1: #k is 25 :                                                                
                 #make kmers and check occurances   
                 match = re.match("^[ACTGactg]*$",seq[i])
                 if match is None:
                     rare_occurance = 0
-                    #skip ambigious chars                                                                                                          
+                    #skip ambigious chars                                     
                     i += 1
                     continue
                 mer_string = seq[i:k+i]
@@ -154,7 +155,7 @@ def main(contigs,query_path,k,test,fix,fout,tout,fixedout,database,thre,rep_thre
             with open(fixedout,'w') as of:
                 for seqname in wrong_kmers_dict.keys():
                     of.write(">{}\n".format(seqname))
-                    of.write(seqs[i])
+                    of.write(textwrap.fill(seqs[i],width=60))
                     of.write("\n")
                     i+=1
             base_fields = ['Contig', 'Base_coord', 'Original','Mutated']
@@ -225,29 +226,29 @@ def fixing_sid(seq,to_be_fixed,k,threshold,qf,num_below_thres_kmers,good_before,
                 seq = temp
                 fixed_base = b
                 fixed_ind = [good_after-1]
-            #else:
-                #b = fix_insert(to_be_fixed,k,threshold,qf)
-                #if b != None:
-                    #print("{} was inserted as index {}, now removed".format(b,good_after-1))
-                    #original = "i"+seq[good_after-1]
-                    #seq = seq[:good_after-1] + seq[good_after:]
-                    #fixed_base = '-'
-                    #fixed_ind = [good_after-1]
+            else:
+                b = fix_insert(to_be_fixed,k,threshold,qf)
+                if b != None:
+                    print("{} was inserted as index {}, now removed".format(b,good_after-1))
+                    original = "i"+seq[good_after-1]
+                    seq = seq[:good_after-1] + seq[good_after:]
+                    fixed_base = '-'
+                    fixed_ind = [good_after-1]
                                     
-        #if num_below_thres_kmers == k-1: #deletion by one or more bases
-           #fixed_ind = [good_after-1]
-           #removed_bases = fix_del(to_be_fixed,k,threshold,qf)
-           #if removed_bases != None:
-               #original = "-"
-               #fixed_ind = [good_after-1]
-               #seq = seq[:good_after]+removed_bases+seq[good_after:]
-               #print("{} was lost after index {}".format(removed_bases,good_after-1))
-               #fixed_base = removed_bases
-           #elif (seq[good_before] == seq[good_before+1]) and (fix_same_base_insertion(to_be_fixed,k,threshold,qf) == True):
-               #print("{}, the same base as the good base after it, was inserted. Now removed".format(seq[good_after-1]))
-               #original = "i"+seq[good_after-1]
-               #seq = seq[:good_after-1] + seq[good_after:]     
-               #fixed_base = "-"
+        if num_below_thres_kmers == k-1: #deletion by one or more bases
+           fixed_ind = [good_after-1]
+           removed_bases = fix_del(to_be_fixed,k,threshold,qf)
+           if removed_bases != None:
+               original = "-"
+               fixed_ind = [good_after-1]
+               seq = seq[:good_after]+removed_bases+seq[good_after:]
+               print("{} was lost after index {}".format(removed_bases,good_after-1))
+               fixed_base = removed_bases
+           elif (seq[good_before] == seq[good_before+1]) and (fix_same_base_insertion(to_be_fixed,k,threshold,qf) == True):
+               print("{}, the same base as the good base after it, was inserted. Now removed".format(seq[good_after-1]))
+               original = "i"+seq[good_after-1]
+               seq = seq[:good_after-1] + seq[good_after:]     
+               fixed_base = "-"
         elif num_below_thres_kmers < k-1:
             start,end,s_or_e =  fixhetero(to_be_fixed,k,threshold,qf)
             if s_or_e !=  None:
@@ -291,7 +292,7 @@ def fixhetero(seq_to_be_fixed,k,threshold,qf):
                     continue
                 trial = x + seq_to_be_fixed[1:len(seq_to_be_fixed)-k]+y+seq_to_be_fixed[len(seq_to_be_fixed)-k+1:]
                 fixed = True
-                for i in  range(len(trial)-k):
+                for i in  range(len(trial)-k+1):
                     if qf[jf.MerDNA(trial[i:k+i]).get_canonical()] < threshold:
                         fixed  = False
                         break
