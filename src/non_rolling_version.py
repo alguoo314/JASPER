@@ -39,15 +39,16 @@ def main(contigs,query_path,k,test,fix,fout,tout,fixedout,database,thre,rep_thre
             backtracked = False
             i = 0 #first k mer at position 0
             wrong_kmers_list = []                                                                                                       
-            while i < len(seq)-k+1: #k is 25 :                                                                
-                #make kmers and check occurances   
-                match = re.match("^[ACTGactg]*$",seq[i])
-                if match is None:
-                    rare_occurance = 0
-                    #skip ambigious chars                                     
-                    i += 1
-                    continue
+            while i < len(seq)-k+1: #k is 25 :  
                 mer_string = seq[i:k+i]
+                #match = re.match("^[ACTGactg]*$",mer_string)
+                #if match is None:
+                N = mer_string.find('N')
+                if N >= 0:
+                    i+=(N+1)
+                    rare_occurance = 0
+                    continue
+
                 mer = jf.MerDNA(mer_string).get_canonical()
                 occurrance = qf[mer]
                 
@@ -86,7 +87,7 @@ def main(contigs,query_path,k,test,fix,fout,tout,fixedout,database,thre,rep_thre
                         i=good_after
                         continue
                     print("Good before Index start: {}".format(good_before-k+2))
-                    while  qf[jf.MerDNA(seq[good_before-k+2:good_before+2]).get_canonical()] > prev_good_count/2 and good_before-k+1 < good_after:
+                    while  qf[jf.MerDNA(seq[good_before-k+2:good_before+2]).get_canonical()] >= prev_good_count/2 and good_before-k+1 < good_after:
                         if good_before == -1:
                             break
                         prev_good_count = qf[jf.MerDNA(seq[good_before-k+2:good_before+2]).get_canonical()]
