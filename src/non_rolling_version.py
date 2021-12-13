@@ -6,11 +6,9 @@ import math
 import csv
 import dna_jellyfish as jf
 import textwrap
-#from timer import Timer
 
 def main(contigs,query_path,k,test,fix,fout,tout,fixedout,database,thre,rep_thre):
     try:
-        #t = Timer()
         threshold = thre
         rep_region_threshold = rep_thre
         db = database
@@ -23,7 +21,6 @@ def main(contigs,query_path,k,test,fix,fout,tout,fixedout,database,thre,rep_thre
         print("Threshold for Repetitive Region=  {}".format(rep_region_threshold))
         qf  = jf.QueryMerFile(db)
         seq_dict = parse_fasta(query_path)
-        #one = 0                       
         wrong_kmers_dict = {}
         wrong_kmers_list = []
         seqs = []
@@ -54,7 +51,6 @@ def main(contigs,query_path,k,test,fix,fout,tout,fixedout,database,thre,rep_thre
                 
                 if occurrance < threshold:
                     rare_occurance += 1
-                    #count_record.append(occurrance)
                     if backtracked == True:
                         i+=1
                         continue
@@ -66,10 +62,7 @@ def main(contigs,query_path,k,test,fix,fout,tout,fixedout,database,thre,rep_thre
                         rare_occurance += 1
                         occurrance = qf[jf.MerDNA(seq[j:k+j]).get_canonical()]
                     good_before = j+k-1 #the end base of a good kmer
-                    #print("previous good kmers:")
                     prev_good_count = qf[jf.MerDNA(seq[j:k+j]).get_canonical()]
-                    #print(prev_good_count, end = " ")
-                    #print(jf.MerDNA(seq[j:k+j]).get_canonical()) 
                     kmer_count = qf[jf.MerDNA(seq[i:k+i]).get_canonical()]                                                            
                     #go forward back to i
 
@@ -83,36 +76,21 @@ def main(contigs,query_path,k,test,fix,fout,tout,fixedout,database,thre,rep_thre
 
                     #A kmer is bad if it is below the threshold AND its count is less than 1/2 of the moving average of rolling_num good k-mers before it AND its previous good kmer is not from a repetitive region.
                     if prev_good_count > rep_region_threshold:
-                        #print("Repetitive Region!")
+                        #repetitive region
                         i=good_after
                         continue
-                    #print("Good before Index start: {}".format(good_before-k+2))
                     while  qf[jf.MerDNA(seq[good_before-k+2:good_before+2]).get_canonical()] >= prev_good_count/2 and good_before-k+1 < good_after:
                         if good_before == -1:
                             break
-                        prev_good_count = qf[jf.MerDNA(seq[good_before-k+2:good_before+2]).get_canonical()]
-                        #print(prev_good_count,end=" ") #testing purpose
-                        #print(jf.MerDNA(seq[good_before-k+2:good_before+2]).get_canonical())
+                        
                         good_before +=1
-                    #print() #testing purpose
+                    
                     if good_before >= len(seq)-1:
                         break
                     to_be_fixed = seq[max(0,good_before-k+2):good_after+k-1]
                         
                     wrong_kmers_list.extend([*range(max(0,good_before-k+2),good_after)])
-                    #print("Bad kmers:")
-                    #print("Good before, good after = {} {}".format(good_before-k+2,good_after-1))
                     
-                    #w = 0
-                    #for ind in range(max(0,good_before-k+2),good_after):
-                        #w +=1
-                        # if int(qf[jf.MerDNA(seq[ind:k+ind]).get_canonical()]) < 2:
-                        #     one+=1
-                        #print(qf[jf.MerDNA(seq[ind:k+ind]).get_canonical()],end = " ") #testing purpose
-                    #print("Number of consecutive bad kmers listed  above" + str(w))
-                    #print()
-                    #print()
-                    #print("Next iteration")
                     if fix == True:
                         seq,fixed_base,original,fixed_ind = fixing_sid(seq,to_be_fixed,k,threshold,qf,len([*range(max(0,good_before-k+2),good_after)]),good_before,good_after) #fix simple sub/insert/del cases
                         if fixed_base != "nN":
@@ -132,7 +110,6 @@ def main(contigs,query_path,k,test,fix,fout,tout,fixedout,database,thre,rep_thre
             seqs.append(seq)
             wrong_kmers_dict[seqname] = wrong_kmers_list
             total_wrong_kmers += len(wrong_kmers_list)
-            #total_kmers += len(seq)-k+1
 
 
         if test == True:
@@ -163,9 +140,9 @@ def main(contigs,query_path,k,test,fix,fout,tout,fixedout,database,thre,rep_thre
             with open(fixedout,'w') as of:
                 for seqname in wrong_kmers_dict.keys():
                     of.write(">{}\n".format(seqname))
-                    #of.write(textwrap.fill(seqs[i],width=60))
-                    of.write(seqs[i])
-                    of.write("\n")
+                    new_seq = split_output(seqs[i],60)
+                    for l in new_seq:
+                        of.write(l+"\n")
                     i+=1
         return
     except:
@@ -177,6 +154,16 @@ def main(contigs,query_path,k,test,fix,fout,tout,fixedout,database,thre,rep_thre
          sys.exit(1)
 
 
+
+
+def split_output(seq, num_per_line=60): #make a new line after num_per_line bases
+    lines = math.ceil(len(seq)/num_per_line)
+    output = []
+    for i in range(lines):
+        output.append(seq[num_per_line*i:num_per_line*(i+1)])
+    return output
+
+         
 
 def jellyfish(contigs,k,thre,rep_thre):
     count = math.inf
@@ -194,7 +181,6 @@ def jellyfish(contigs,k,thre,rep_thre):
         for row in csvreader:
             if count >= int(row[-1]) and found_thres == False:
                 count = int(row[-1])
-                #threshold = int(int(row[0])*math.log(2))
                 threshold = int(int(row[0])/2)
             elif found_thres == False: #found the local min, start to find next local max
                 found_thres = True
@@ -232,7 +218,6 @@ def fixing_sid(seq,to_be_fixed,k,threshold,qf,num_below_thres_kmers,good_before,
             else:
                 b = fix_insert(to_be_fixed,k,threshold,qf)
                 if b != None:
-                    #print("{} was inserted as index {}, now removed".format(b,good_after-1))
                     original = "i"+seq[good_after-1]
                     temp = seq[:good_after-1] + seq[good_after:]
                     seq = temp
@@ -246,11 +231,9 @@ def fixing_sid(seq,to_be_fixed,k,threshold,qf,num_below_thres_kmers,good_before,
                fixed_ind = [good_after]
                temp = seq[:good_after]+removed_bases+seq[good_after:]
                seq = temp
-               #print("{} was lost after index {}".format(removed_bases,good_after-1))
                fixed_base = removed_bases
            elif (seq[good_before] == seq[good_before+1]) and (fix_same_base_insertion(to_be_fixed,k,threshold,qf) == True):
-               #print("{}, the same base as the good base after it, was inserted. Now removed".format(seq[good_after-1]))
-               original = "i"+seq[good_before]#==good_before+1
+               original = "i"+seq[good_before]
                temp = seq[:good_before] + seq[good_before+1:]     
                seq = temp
                fixed_base = "-"
@@ -259,7 +242,6 @@ def fixing_sid(seq,to_be_fixed,k,threshold,qf,num_below_thres_kmers,good_before,
             start,end,s_or_e =  fixhetero(to_be_fixed,k,threshold,qf)
             if s_or_e !=  None:
                 if s_or_e == "b": #b stands for both bases are changed
-                    #print(good_before)
                     original = ["s"+seq[good_after-1],"s"+seq[good_before+1]]
                     fixed_base = [str(start),str(end)]
                     fixed_ind = [good_after-1,good_before+1]
@@ -283,8 +265,7 @@ def fixing_sid(seq,to_be_fixed,k,threshold,qf,num_below_thres_kmers,good_before,
             
 
         
-    #else:
-       #print("No available fixes for bad kmers from index {} to {}".format(good_before+1,good_after-1))
+
          
                 
 def fixhetero(seq_to_be_fixed,k,threshold,qf):
@@ -345,7 +326,6 @@ def fix_sub(seq_to_be_fixed,k,threshold,qf):
 
 
 def fix_insert(seq_to_be_fixed,k,threshold,qf):
-    #original_seq = seq_to_be_fixed
     ind_to_be_removed = k-1
     base_to_be_removed = seq_to_be_fixed[ind_to_be_removed]
     seq_to_be_fixed = seq_to_be_fixed[:ind_to_be_removed] + seq_to_be_fixed[ind_to_be_removed+1:]
@@ -360,21 +340,16 @@ def fix_insert(seq_to_be_fixed,k,threshold,qf):
 
 
 def fix_del(seq_to_be_fixed,k,threshold,qf): #assume at most three deletions
-    for x in 'N': #HIII CHANGE BACK
-        for y in 'N':
-            for z in 'NACTG':
-                if str(x+y+z) == "NNN":
-                    continue
-                trial = seq_to_be_fixed
-                added_bases = (x+y+z).replace("N", "")
-                trial = seq_to_be_fixed[:k-1]+added_bases+seq_to_be_fixed[k-1:]
-                fixed = True
-                for i in  range(len(trial)-k+1):
-                    if qf[jf.MerDNA(trial[i:k+i]).get_canonical()] < threshold:
-                        fixed  = False
-                        break
-                if fixed == True:
-                    return added_bases
+    for alt in 'ATCG':
+        trial = seq_to_be_fixed
+        trial = seq_to_be_fixed[:k-1]+alt+seq_to_be_fixed[k-1:]
+        fixed = True
+        for i in  range(len(trial)-k+1):
+            if qf[jf.MerDNA(trial[i:k+i]).get_canonical()] < threshold:
+                fixed  = False
+                break
+        if fixed == True:
+            return alt
                         
     return None
 
@@ -398,22 +373,16 @@ def parse_fasta(query_file):
     temp = ''
     seq = {}
     name = "placeholder"
-    #print("parser running")                                                   \                                                                   
-
     for line in f:
         if line.startswith(">"):
             seq[name] = temp
-            name = line.split()[0][1:] #save the sequence name/number                           \                                                  
+            name = line.split()[0][1:] #save the sequence name/number
             temp = ''
-            #print(name)                                                                                                                           
         else:
-            temp += line.replace('\n','') #remove whitespaces in the sequence                   \                                                  
-
-            #seq[name] += temp                                                                  \                                                  
+            temp += line.replace('\n','') #remove whitespaces in the sequence
 
     seq[name] = temp
     seq.pop("placeholder") #remove the first key put into the dict as a placeholder                                                                
-    #print("closing the file")                                                                                                                     
     f.close()
     return seq
 
@@ -429,7 +398,7 @@ if __name__ == '__main__':
     parser.add_argument("--test", action='store_true',help = "Print loc of bad kmers, total num of bad kmers, and estimate for Q")
     parser.add_argument("--fix", action='store_true', help="Output the index of fixed bases and output the new sequence")
     parser.add_argument("--fout",default = "fout.csv",help = "Output the index of the fixed bases (index based on the original unfix seq)" )
-    parser.add_argument("-fo","--fixedout",default = "fixed_seq.fasta",help = "The output file containing the fixed sequence")
+    parser.add_argument("-ff","--fixedfasta",default = "fixed_seq.fasta",help = "The output file containing the fixed sequence")
     parser.add_argument("--tout", default = "tout.csv", help = "The output file containing the locations of bad kmers")
     args = parser.parse_args()
-    main(args.contigs,args.query,args.ksize,args.test,args.fix,args.fout,args.tout,args.fixedout,args.db,args.threshold,args.rep_thre)
+    main(args.contigs,args.query,args.ksize,args.test,args.fix,args.fout,args.tout,args.fixedfasta,args.db,args.threshold,args.rep_thre)
