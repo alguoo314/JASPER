@@ -45,15 +45,15 @@ Look at the second column in the .histo file. Find the row of the first local mi
 Then locate the glocal maximum in the second column among the rows below the bad kmer threshold row, then the 2* the value in the first column in this row is the repeititve region threshold 
 
 Below is showing examples how to run My_Program (Each # represent an integer)
-# I have the reads to build the .jf file and would like the program to determine the two threshold. Also want both testing and fixing outputs
+If I have the reads to build the .jf file and would like the program to determine the two threshold. Also want both testing and fixing outputs
 ```shell
 python My_Program.py --reads read1.fastq (read2.fastq, etc.)  --query assembly.fasta --ksize # --test --fix --fout fix.csv  --tout test.csv -ff fixed.fasta
 ```
-#I have the reads to build the .jf file and want a specific repetitve region threshold (or bad kmer threshold, just providing the --threshold argument instead of -repthre)
+If I have the reads to build the .jf file and want a specific repetitve region threshold (or bad kmer threshold, just providing the --threshold argument instead of -repthre)
 ```shell
 python My_Program.py --reads read1.fastq (read2.fastq, etc.) -rep_thre # --query assembly.fasta --ksize # --test --fix --fout fix.csv  --tout test.csv -ff fixed.fasta
 ```
-# I have the .jf file already along with the two thresholds. Also want both testing and fixing outputs
+If I have the .jf file already along with the two thresholds. Also want both testing and fixing outputs
 ```shell
 python My_Program.py --db mydb.jf  --threshold # -rep_thre # --query assembly.fasta --ksize # --test --fix --fout fix.csv  --tout test.csv -ff fixed.fasta 
 ```
