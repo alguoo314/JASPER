@@ -82,7 +82,7 @@ def main(contigs,query_path,k,test,fix,fout,tout,fixedout,database,thre,rep_thre
                     while  qf[jf.MerDNA(seq[good_before-k+2:good_before+2]).get_canonical()] >= prev_good_count/2 and good_before-k+1 < good_after:
                         if good_before == -1:
                             break
-                        
+                        prev_good_count = qf[jf.MerDNA(seq[good_before-k+2:good_before+2]).get_canonical()]
                         good_before +=1
                     
                     if good_before >= len(seq)-1:
@@ -390,15 +390,16 @@ def parse_fasta(query_file):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument("--db", default = None, help="The path to the .jf  database file. Not needed if --contigs is given.")
-    parser.add_argument("--contigs",nargs='+',default = None, help="The path to the .fasta file(s） containing the contigs to build the jellyfish database. Not needed if --db is provided")
+    parser.add_argument("--reads",nargs='+',default = None, help="The path to the .fasta file(s）containing the contigs to build the jellyfish database. Not needed if --db is provided")
     parser.add_argument("-q","--query", help = "The path to the .fasta query file")
     parser.add_argument("-thre","--threshold", type=int, default = None, help = "The threshold for a bad kmer.")
     parser.add_argument("-rep_thre", type=int, default = None, help = "The threshold  of occurrance for a kmer at a repeitive region.")
     parser.add_argument("-k","--ksize", type=int,help = "The kmer size")
-    parser.add_argument("--test", action='store_true',help = "Print loc of bad kmers, total num of bad kmers, and estimate for Q")
+    parser.add_argument("--test", action='store_true',help = "Ouput the indexes of bad kmers, total num of bad kmers, and an estimation for Q value")
     parser.add_argument("--fix", action='store_true', help="Output the index of fixed bases and output the new sequence")
-    parser.add_argument("--fout",default = "fout.csv",help = "Output the index of the fixed bases (index based on the original unfix seq)" )
-    parser.add_argument("-ff","--fixedfasta",default = "fixed_seq.fasta",help = "The output file containing the fixed sequence")
+    parser.add_argument("--fout",default = "fout.csv",help = "The path to output the index of the fixed bases." )
+    parser.add_argument("-ff","--fixedfasta",default = "fixed_seq.fasta",help = "The path to output the fixed assembly sequences")
     parser.add_argument("--tout", default = "tout.csv", help = "The output file containing the locations of bad kmers")
     args = parser.parse_args()
-    main(args.contigs,args.query,args.ksize,args.test,args.fix,args.fout,args.tout,args.fixedfasta,args.db,args.threshold,args.rep_thre)
+    main(args.reads,args.query,args.ksize,args.test,args.fix,args.fout,args.tout,args.fixedfasta,args.db,args.threshold,args.rep_thre)
+
