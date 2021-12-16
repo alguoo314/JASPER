@@ -1,4 +1,6 @@
-# My_Project
+# Jasper
+
+Jellyfish based Assembly Sequence Polisher for Error Reduction
 ## Evaluate genome assemblies with Jellyfish and k-mers
 
 (short description) 
@@ -55,5 +57,5 @@ python My_Program.py --reads read1.fastq (read2.fastq, etc.) -rep_thre # --query
 ```
 If I have the .jf file already along with the two thresholds. Also want both testing and fixing outputs
 ```shell
-python My_Program.py --db mydb.jf  --threshold # -rep_thre # --query assembly.fasta --ksize # --test --fix --fout fix.csv  --tout test.csv -ff fixed.fasta 
+python jasper.py --db mydb.jf  --threshold # -rep_thre # --query assembly.fasta --ksize # --test --fix --fout fix.csv  --tout test.csv -ff fixed.fasta 
 ```
