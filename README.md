@@ -20,6 +20,9 @@ Jellyfish based Assembly Sequence Polisher for Error Reduction
 See instructions in Jellyfish's manual (https://github.com/gmarcais/Jellyfish)
 
 2. Download the release version of My_Project
+3. Then, for Python, an environment variable may need to be adjusted (PYTHONPATH). For example:
+
+export PYTHONPATH=$HOME/lib/python2.7/site-packages
 
 Blah blah blah
 
