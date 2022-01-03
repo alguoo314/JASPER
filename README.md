@@ -39,7 +39,7 @@ Options:\
   -rep_thre, the threshold  of occurrance for a kmer at a repeitive region. Type = int. If not provided, will be be calculated from the .jf file.\
   --test, output the indexes of bad kmers, total num of bad kmers, and an estimation for Q value.\
   -thre, --threshold, the threshold for a bad kmer. Type = int. If not provided, will be be calculated from the .jf file.\
-  --tout, the path to output the locations of bad kmers (1-based). Default = tout.csv. No use if --test is not provided.\
+  --tout, the path to output the locations of bad kmers (1-based). Default = tout.csv. No use if --test is not provided.
 
 *Note: 
 1. One and only one between the contigs and database argument should be given.
