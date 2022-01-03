@@ -43,13 +43,13 @@ Options:\
 
 *Note: 
 1. One and only one between the contigs and database argument should be given.
-2. If desired, the user can manually calculate the two thresholds from the Jellyfish histogram file:
-jellyfish histo your.jf > your.histo
-Look at the second column in the .histo file. Find the row of the first local minimum in the second column, then 0.5*the value in the first column in this row is the bad kmer threshold. 
+2. If desired, the user can manually calculate the two thresholds from the Jellyfish histogram file:\
+jellyfish histo your.jf > your.histo \
+Look at the second column in the .histo file. Find the row of the first local minimum in the second column, then 0.5*the value in the first column in this row is the bad kmer threshold. \
 Then locate the glocal maximum in the second column among the rows below the bad kmer threshold row, then the 2* the value in the first column in this row is the repeititve region threshold 
 
-Below is showing examples how to run Jasper (Each # represent an integer)
-If I have the reads to build the .jf file and would like the program to determine the two threshold. Also want both testing and fixing outputs
+Below is showing examples how to run Jasper (Each # represent an integer)\
+If I have the reads to build the .jf file and would like the program to determine the two threshold. Also want both testing and fixing outputs\
 ```shell
 python jasper.py --reads read1.fastq (read2.fastq, etc.)  --query assembly.fasta --ksize # --test --fix --fout fix.csv  --tout test.csv -ff fixed.fasta
 ```
