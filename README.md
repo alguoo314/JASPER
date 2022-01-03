@@ -27,12 +27,12 @@ export PYTHONPATH=$HOME/lib/python2.7/site-packages
 
 
 ## Run
-Options:
-  --db, the path to the .jf  database file. REQUIRED if --reads is not given.
-  --fix, output the index of fixed bases and output the new sequence.
-  -ff, --fixedfasta, the path to output the fixed assembly sequences. Default = fixed_seq.fasta. No use if --fix is not provided
-  --fout, the path to output the index of the fixed bases (0-based). Default = fout.csv. No use if --fix is not provided
-  --help,	display this help message
+Options:\
+  --db, the path to the .jf  database file. REQUIRED if --reads is not given.\
+  --fix, output the index of fixed bases and output the new sequence.\
+  -ff, --fixedfasta, the path to output the fixed assembly sequences. Default = fixed_seq.fasta. No use if --fix is not provided.\
+  --fout, the path to output the index of the fixed bases (0-based). Default = fout.csv. No use if --fix is not provided.\
+  --help,	display this help message.\
   -k, --ksize, the kmer size. Type = int. REQUIRED
   -q, --query, the path to the .fasta query file. REQUIRED
   --reads, the path to the .fasta file(s）containing the reads to build the jellyfish database. REQUIRED if --db is not given.
