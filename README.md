@@ -22,7 +22,7 @@ See instructions in Jellyfish's manual (https://github.com/gmarcais/Jellyfish)
 3. Download the release version of Jasper
 4. Then, for Python, the environment variable PYTHONPATH may need to be adjusted. For example:
 
-export PYTHONPATH=$HOME/lib/python2.7/site-packages
+    export PYTHONPATH=$HOME/lib/python2.7/site-packages
 
 
 
@@ -44,20 +44,20 @@ Options:\
 *Note: 
 1. One and only one between the contigs and database argument should be given.
 2. If desired, the user can manually calculate the two thresholds from the Jellyfish histogram file:\
-jellyfish histo your.jf > your.histo \
-Look at the second column in the .histo file. Find the row of the first local minimum in the second column, then 0.5*the value in the first column in this row is the bad kmer threshold. \
-Then locate the glocal maximum in the second column among the rows below the bad kmer threshold row, then the 2* the value in the first column in this row is the repeititve region threshold 
+  jellyfish histo your.jf > your.histo \
+  Look at the second column in the .histo file. Find the row of the first local minimum in the second column, then 0.5*the value in the first column in this row is   the bad kmer threshold. \
+  Then locate the glocal maximum in the second column among the rows below the bad kmer threshold row, then the 2* the value in the first column in this row is the   repeititve region threshold 
 
-Below is showing examples how to run Jasper (Each # represent an integer)\
+Below is showing examples how to run Jasper (Each int represent an integer)\
 If I have the reads to build the .jf file and would like the program to determine the two threshold. Also want both testing and fixing outputs\
 ```shell
-python jasper.py --reads read1.fastq (read2.fastq, etc.)  --query assembly.fasta --ksize # --test --fix --fout fix.csv  --tout test.csv -ff fixed.fasta
+python jasper.py --reads read1.fastq (read2.fastq, etc.)  --query assembly.fasta --ksize int --test --fix --fout fix.csv  --tout test.csv -ff fixed.fasta
 ```
 If I have the reads to build the .jf file and want a specific repetitve region threshold (or bad kmer threshold, just providing the --threshold argument instead of -repthre)
 ```shell
-python jasper.py --reads read1.fastq (read2.fastq, etc.) -rep_thre # --query assembly.fasta --ksize # --test --fix --fout fix.csv  --tout test.csv -ff fixed.fasta
+python jasper.py --reads read1.fastq (read2.fastq, etc.) -rep_thre int --query assembly.fasta --ksize int --test --fix --fout fix.csv  --tout test.csv -ff fixed.fasta
 ```
 If I have the .jf file already along with the two thresholds. Also want both testing and fixing outputs
 ```shell
-python jasper.py --db mydb.jf  --threshold # -rep_thre # --query assembly.fasta --ksize # --test --fix --fout fix.csv  --tout test.csv -ff fixed.fasta 
+python jasper.py --db mydb.jf  --threshold int -rep_thre int --query assembly.fasta --ksize int --test --fix --fout fix.csv  --tout test.csv -ff fixed.fasta 
 ```
