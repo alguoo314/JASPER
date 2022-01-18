@@ -81,8 +81,10 @@ def main(contigs,query_path,k,test,fix,fout,tout,fixedout,database,thre,rep_thre
                         #i=good_after
                         #continue
                         #jan 14 revision, directly consider it as diploid case
-                        shortcut_flag = True
-
+                        if len([*range(max(0,good_before-k+2),good_after)]) < k-1:
+                            shortcut_flag = True
+                        else:
+                            continue
 
                     else:  #nonrepetitive region case
                         shortcut_flag = False
