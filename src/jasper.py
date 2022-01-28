@@ -79,7 +79,7 @@ def main(contigs,query_path,k,test,fix,fout,tout,fixedout,database,thre,rep_thre
                     rep_as_diploid_flag = False
                     #A kmer is bad if it is below the threshold AND its count is less than 1/2 of the good k-mers before it AND its previous good kmer is not from a repetitive region (special case apply).
                 
-                    if (qf[jf.MerDNA(seq[good_before-k+2:good_before+2]).get_canonical()] < 2) and (qf[jf.MerDNA(seq[good_before-k+3:good_before+3]).get_canonical()] < 2):
+                    if (qf[jf.MerDNA(seq[good_before-k+2:good_before+2]).get_canonical()] < 6) and (qf[jf.MerDNA(seq[good_before-k+3:good_before+3]).get_canonical()] < 6):
                         too_low_flag = True #this case has higher priority than the rep_as_diploid_flag case. This flag itself has no use debugginh
                     elif prev_good_count > rep_region_threshold:
                         #repetitive region
@@ -92,7 +92,7 @@ def main(contigs,query_path,k,test,fix,fout,tout,fixedout,database,thre,rep_thre
                             too_low_flag =  False
                             t = good_before+1
                             while t-k+1 < good_after:
-                                if qf[jf.MerDNA(seq[t-k+2:t+2]).get_canonical()] < 2 and qf[jf.MerDNA(seq[t-k+3:t+3]).get_canonical()] < 2:
+                                if qf[jf.MerDNA(seq[t-k+2:t+2]).get_canonical()] < 6 and qf[jf.MerDNA(seq[t-k+3:t+3]).get_canonical()] < 6:
                                     good_before = t
                                     too_low_flag = True
                                     break
@@ -103,7 +103,7 @@ def main(contigs,query_path,k,test,fix,fout,tout,fixedout,database,thre,rep_thre
                         while  qf[jf.MerDNA(seq[good_before-k+2:good_before+2]).get_canonical()] >= prev_good_count/2 and good_before-k+1 < good_after:
                             if good_before == -1:
                                 break
-                            if (prev_good_count >= 2 and (qf[jf.MerDNA(seq[good_before-k+2:good_before+2]).get_canonical()] < 2) and (qf[jf.MerDNA(seq[good_before-k+3:good_before+3]).get_canonical()] < 2)):
+                            if (prev_good_count >= 6 and (qf[jf.MerDNA(seq[good_before-k+2:good_before+2]).get_canonical()] < 6) and (qf[jf.MerDNA(seq[good_before-k+3:good_before+3]).get_canonical()] < 6)):
                                 too_low_flag = True
                                 break
                             prev_good_count = qf[jf.MerDNA(seq[good_before-k+2:good_before+2]).get_canonical()]
@@ -262,7 +262,7 @@ def fixing_sid(rep_as_diploid_flag,seq,to_be_fixed,k,threshold,qf,num_below_thre
                temp = seq[:good_after]+removed_base+seq[good_after:]
                seq = temp
                fixed_base = removed_base 
-           elif (seq[good_before] == seq[good_before+1]) and (fix_same_base_insertion(to_be_fixed,k,threshold,qf) == True):
+           elif fix_same_base_insertion(to_be_fixed,k,threshold,qf,num_below_thres_kmers)!= None:
                original = "i"+seq[good_before]
                temp = seq[:good_before] + seq[good_before+1:]     
                seq = temp
@@ -294,7 +294,7 @@ def fixing_sid(rep_as_diploid_flag,seq,to_be_fixed,k,threshold,qf,num_below_thre
                     fixed_ind = [good_before+1]
                 temp = seq[:good_after-1]+left+seq[good_after:good_before+1] + right + seq[good_before+2:]
                 seq =  temp
-            else: #check same base deletion
+            else: #check same base deletion and same base insertion
                 removed_base = fix_sb_del(to_be_fixed,k,threshold,qf,num_below_thres_kmers)
                 if removed_base != None: #deletion of a base
                     original = "d-"
@@ -302,14 +302,35 @@ def fixing_sid(rep_as_diploid_flag,seq,to_be_fixed,k,threshold,qf,num_below_thre
                     temp = seq[:good_after]+removed_base+seq[good_after:]
                     seq = temp
                     fixed_base = removed_base 
+                else:
+                    inserted_base = fix_same_base_insertion(to_be_fixed,k,threshold,qf,num_below_thres_kmers)
+                    if inserted_base != None:
+                        original = "i"+inserted_base
+                        temp = seq[:good_before] + seq[good_before+1:]     
+                        seq = temp
+                        fixed_base = "-"
+                        fixed_ind = [good_before] #insertion after this index
         if num_below_thres_kmers > k:
-           x,y = fix_nearby_subs(to_be_fixed,k,threshold,qf,num_below_thres_kmers)
-           if x != None:
-              original = ["s"+seq[good_after-1-num_below_thres_kmers+k],"s"+seq[good_after-1]] 
-              temp = seq[:good_after-1-num_below_thres_kmers+k] + x + seq[good_after-num_below_thres_kmers+k:good_after-1] + y + seq[good_after:]
-              seq = temp
-              fixed_base = [x,y]
-              fixed_ind = [good_after-1-num_below_thres_kmers+k,good_after-1]
+            x,y = fix_nearby_subs(to_be_fixed,k,threshold,qf,num_below_thres_kmers)
+            if x != None and y!=None:
+                original = ["s"+seq[good_after-1-num_below_thres_kmers+k],"s"+seq[good_after-1]] 
+                temp = seq[:good_after-1-num_below_thres_kmers+k] + x + seq[good_after-num_below_thres_kmers+k:good_after-1] + y + seq[good_after:]
+                seq = temp
+                fixed_base = [x,y]
+                fixed_ind = [good_after-1-num_below_thres_kmers+k,good_after-1]
+            elif x != None:
+                original = "s"+seq[good_after-1-num_below_thres_kmers+k]
+                temp = seq[:good_after-1-num_below_thres_kmers+k] + x + seq[good_after-num_below_thres_kmers+k:]
+                seq =  temp
+                fixed_base = x
+                fixed_ind = [good_after-1-num_below_thres_kmers+k]
+            elif y!= None:
+                original = "s"+seq[good_after-1]
+                temp = seq[:good_after-1]+ y + seq[good_after:]
+                seq = temp
+                fixed_base = y
+                fixed_ind = [good_after-1]
+                                                            
         return seq,fixed_base, original, fixed_ind
     except:
          exception_type, exception_object, exception_traceback = sys.exc_info()
@@ -375,6 +396,7 @@ def fix_k_case_sub(seq_to_be_fixed,k,threshold,qf): #when number of conseuctive 
             for i in range(len(trial)-k+1):
                 if qf[jf.MerDNA(trial[i:k+i]).get_canonical()] < threshold:
                     fixed  = False
+                    break
             if fixed == True:
                 return b
     return None
@@ -393,33 +415,39 @@ def fix_k_minus_1_case_sub(seq_to_be_fixed,k,threshold,qf): #when number of cons
              for i in range(len(trial)-k+1):
                 if qf[jf.MerDNA(trial[i:k+i]).get_canonical()] < threshold:
                     fixed  = False
+                    break
              if fixed == True:
                 return b,r
     return None,None
     
 def fix_nearby_subs(seq_to_be_fixed,k,threshold,qf,num_below_thres_kmers):
-    #left = k-1
-    #right = num_below_thres_kmers-1
     for x in 'ACTG':
         if x == seq_to_be_fixed[k-1]:
             continue
         for y in 'ACTG':
             fixed = False
-            if y == seq_to_be_fixed[num_below_thres_kmers-1]:
+            if y == seq_to_be_fixed[len(seq_to_be_fixed)-k]:
                 continue
             else:
-                trial = seq_to_be_fixed[:k-1]+x+seq_to_be_fixed[k:num_below_thres_kmers-1]+y+seq_to_be_fixed[num_below_thres_kmers:]
+                trial = seq_to_be_fixed[:k-1]+x+seq_to_be_fixed[k:len(seq_to_be_fixed)-k]+y+seq_to_be_fixed[len(seq_to_be_fixed)-k+1:]
                 fixed = True
                 for i in range(len(trial)-k+1):
                     if qf[jf.MerDNA(trial[i:k+i]).get_canonical()] < threshold:
                         fixed  = False
+                        break
                 if fixed == True:
                     return x,y
+                else:
+                    if qf[jf.MerDNA(seq_to_be_fixed[:k-1]+x).get_canonical()]  >= threshold and qf[jf.MerDNA(seq_to_be_fixed[1:k-1]+x+seq_to_be_fixed[k]).get_canonical()] > threshold:
+                        return x,None
+                    elif qf[jf.MerDNA(seq_to_be_fixed[len(seq_to_be_fixed)-k-1]+y+seq_to_be_fixed[len(seq_to_be_fixed)-k+1:len(seq_to_be_fixed)-1]).get_canonical()]  >= threshold and qf[jf.MerDNA(y+seq_to_be_fixed[len(seq_to_be_fixed)-k+1:]).get_canonical()] >= threshold:
+                       return None,y
     return None, None
                
                 
 
 def fix_insert(seq_to_be_fixed,k,threshold,qf):
+    
     ind_to_be_removed = k-1
     base_to_be_removed = seq_to_be_fixed[ind_to_be_removed]
     seq_to_be_fixed = seq_to_be_fixed[:ind_to_be_removed] + seq_to_be_fixed[ind_to_be_removed+1:]
@@ -427,6 +455,7 @@ def fix_insert(seq_to_be_fixed,k,threshold,qf):
     for i in range(len(seq_to_be_fixed)-k+1):
         if qf[jf.MerDNA(seq_to_be_fixed[i:k+i]).get_canonical()] < threshold:
             fixed  = False
+            break
     if fixed == True:
             return base_to_be_removed
     return None
@@ -463,15 +492,20 @@ def fix_sb_del(seq_to_be_fixed,k,threshold,qf,num_below_thres_kmers):
         return None
 
 
-def fix_same_base_insertion(seq_to_be_fixed,k,threshold,qf):
+def fix_same_base_insertion(seq_to_be_fixed,k,threshold,qf,num_below_thres_kmers):
     ind_to_be_removed = k-1
-    seq_to_be_fixed = seq_to_be_fixed[:ind_to_be_removed] + seq_to_be_fixed[ind_to_be_removed+1:]
-    fixed=True
-    for i in  range(len(seq_to_be_fixed)-k+1):
-        if qf[jf.MerDNA(seq_to_be_fixed[i:k+i]).get_canonical()] < threshold:
-            fixed  = False
+    sb = seq_to_be_fixed[k-1] #sb stands for same base
+    rr = k-num_below_thres_kmers #rr stands for remaining repeat (base) if without the insertion
+    fixed = False
+    if seq_to_be_fixed[k-1-rr:k-1] == sb * rr:
+        seq_to_be_fixed = seq_to_be_fixed[:ind_to_be_removed] + seq_to_be_fixed[ind_to_be_removed+1:]
+        fixed=True
+        for i in  range(len(seq_to_be_fixed)-k+1):
+            if qf[jf.MerDNA(seq_to_be_fixed[i:k+i]).get_canonical()] < threshold:
+                fixed  = False
+                break
     if fixed == True:
-        return True
+        return sb
     return None
 
 
