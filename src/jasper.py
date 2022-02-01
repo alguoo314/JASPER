@@ -45,9 +45,12 @@ def iteration(ite,db,query_path,k,test,fix,fout,tout,fixedout,database,threshold
         fixed_bases_list = []
         total_wrong_kmers = 0
         total_kmers = 0
-        tout = "iter"+str(ite)+"_"+tout
-        fout = "iter"+str(ite)+"_"+fout
-        fixedout = "iter"+str(ite)+"_"+fixedout
+        tout = os.path.split(tout)
+        tout = tout[0]+"_iter"+str(ite)+"_"+tout[1]
+        fout = os.path.split(fout)
+        fout = fout[0]+"_iter"+str(ite)+"_"+fout[1]
+        fixedout = os.path.split(fixedout)
+        fixedout = fixedout[0]+"_iter"+str(ite)+"_"+fixedout[1]
 
         for seqname,seq in seq_dict.items():
             total_kmers += len(seq)-k+1
