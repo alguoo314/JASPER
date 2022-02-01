@@ -7,8 +7,10 @@ import math
 import csv
 import dna_jellyfish as jf
 import textwrap
+import time
 
-def main(contigs,query_path,k,test,fix,fout,tout,fixedout,database,thre,rep_thre):
+def main(contigs,query_path,k,test,fix,fout,tout,fixedout,database,thre,rep_thre,num_iter):
+    start = time.time()
     try:
         threshold = thre
         rep_region_threshold = rep_thre
@@ -21,6 +23,20 @@ def main(contigs,query_path,k,test,fix,fout,tout,fixedout,database,thre,rep_thre
         
         print("Threshold =  {}".format(threshold))
         print("Threshold for Repetitive Region=  {}".format(rep_region_threshold))
+        for ite in range(num_iter):
+            query_path = iteration(ite,db,query_path,k,test,fix,fout,tout,fixedout,database,thre,rep_thre)
+        end = time.time()
+        print(end - start)
+    except:
+         exception_type, exception_object, exception_traceback = sys.exc_info()
+         line_number = exception_traceback.tb_lineno
+         print(line_number)
+         print(sys.exc_info()) #to help debug                                  \                                                                   
+         sys.exit(1)         
+            
+
+def iteration(ite,db,query_path,k,test,fix,fout,tout,fixedout,database,threshold,rep_region_threshold):   
+    try:    
         qf  = jf.QueryMerFile(db)
         seq_dict = parse_fasta(query_path)
         wrong_kmers_dict = {}
@@ -29,6 +45,9 @@ def main(contigs,query_path,k,test,fix,fout,tout,fixedout,database,thre,rep_thre
         fixed_bases_list = []
         total_wrong_kmers = 0
         total_kmers = 0
+        tout = "iter"+str(ite)+"_"+tout
+        fout = "iter"+str(ite)+"_"+fout
+        fixedout = "iter"+str(ite)+"_"+fixedout
 
         for seqname,seq in seq_dict.items():
             total_kmers += len(seq)-k+1
@@ -79,7 +98,7 @@ def main(contigs,query_path,k,test,fix,fout,tout,fixedout,database,thre,rep_thre
                     rep_as_diploid_flag = False
                     #A kmer is bad if it is below the threshold AND its count is less than 1/2 of the good k-mers before it AND its previous good kmer is not from a repetitive region (special case apply).
                 
-                    if (qf[jf.MerDNA(seq[good_before-k+2:good_before+2]).get_canonical()] < 6) and (qf[jf.MerDNA(seq[good_before-k+3:good_before+3]).get_canonical()] < 6):
+                    if (qf[jf.MerDNA(seq[good_before-k+2:good_before+2]).get_canonical()] < threshold/2) and (qf[jf.MerDNA(seq[good_before-k+3:good_before+3]).get_canonical()] < threshold/2):
                         too_low_flag = True #this case has higher priority than the rep_as_diploid_flag case. This flag itself has no use debugginh
                     elif prev_good_count > rep_region_threshold:
                         #repetitive region
@@ -92,7 +111,7 @@ def main(contigs,query_path,k,test,fix,fout,tout,fixedout,database,thre,rep_thre
                             too_low_flag =  False
                             t = good_before+1
                             while t-k+1 < good_after:
-                                if qf[jf.MerDNA(seq[t-k+2:t+2]).get_canonical()] < 6 and qf[jf.MerDNA(seq[t-k+3:t+3]).get_canonical()] < 6:
+                                if qf[jf.MerDNA(seq[t-k+2:t+2]).get_canonical()] < threshold/2 and qf[jf.MerDNA(seq[t-k+3:t+3]).get_canonical()] < threshold/2:
                                     good_before = t
                                     too_low_flag = True
                                     break
@@ -103,7 +122,7 @@ def main(contigs,query_path,k,test,fix,fout,tout,fixedout,database,thre,rep_thre
                         while  qf[jf.MerDNA(seq[good_before-k+2:good_before+2]).get_canonical()] >= prev_good_count/2 and good_before-k+1 < good_after:
                             if good_before == -1:
                                 break
-                            if (prev_good_count >= 6 and (qf[jf.MerDNA(seq[good_before-k+2:good_before+2]).get_canonical()] < 6) and (qf[jf.MerDNA(seq[good_before-k+3:good_before+3]).get_canonical()] < 6)):
+                            if (prev_good_count >= threshold/2 and (qf[jf.MerDNA(seq[good_before-k+2:good_before+2]).get_canonical()] < threshold/2) and (qf[jf.MerDNA(seq[good_before-k+3:good_before+3]).get_canonical()] < threshold/2)):
                                 too_low_flag = True
                                 break
                             prev_good_count = qf[jf.MerDNA(seq[good_before-k+2:good_before+2]).get_canonical()]
@@ -168,14 +187,15 @@ def main(contigs,query_path,k,test,fix,fout,tout,fixedout,database,thre,rep_thre
                     for l in new_seq:
                         of.write(l+"\n")
                     i+=1
-        return
+            return fixedout
+        
+        return 
     except:
-         exception_type, exception_object, exception_traceback = sys.exc_info()
-         line_number = exception_traceback.tb_lineno
-         print(line_number)
-         print(sys.exc_info()) #to help debug                                  \                                                                   
-
-         sys.exit(1)
+        exception_type, exception_object, exception_traceback = sys.exc_info()
+        line_number = exception_traceback.tb_lineno
+        print(line_number)
+        print(sys.exc_info()) #to help debug                           
+        sys.exit(1)
 
 
 
@@ -333,16 +353,11 @@ def fixing_sid(rep_as_diploid_flag,seq,to_be_fixed,k,threshold,qf,num_below_thre
                                                             
         return seq,fixed_base, original, fixed_ind
     except:
-         exception_type, exception_object, exception_traceback = sys.exc_info()
-         line_number = exception_traceback.tb_lineno
-         print(line_number)
-         print(sys.exc_info()) #to help debug                                  \                                                                   
-         sys.exit(1)         
-            
-
-        
-
-         
+        exception_type, exception_object, exception_traceback = sys.exc_info()
+        line_number = exception_traceback.tb_lineno
+        print(line_number)
+        print(sys.exc_info()) #to help debug                                  \                                                                   
+        sys.exit(1)         
                 
 def fixhetero(seq_to_be_fixed,k,threshold,qf): #<k-1
     try:
@@ -542,6 +557,7 @@ if __name__ == '__main__':
     parser.add_argument("--fout",default = "fout.csv",help = "The path to output the index of the fixed bases." )
     parser.add_argument("-ff","--fixedfasta",default = "fixed_seq.fasta",help = "The path to output the fixed assembly sequences")
     parser.add_argument("--tout", default = "tout.csv", help = "The output file containing the locations of bad kmers")
+    parser.add_argument("-p","--num_passes", type=int, default = 2, help = "The number of iterations of fixing.")
     args = parser.parse_args()
-    main(args.reads,args.query,args.ksize,args.test,args.fix,args.fout,args.tout,args.fixedfasta,args.db,args.threshold,args.rep_thre)
+    main(args.reads,args.query,args.ksize,args.test,args.fix,args.fout,args.tout,args.fixedfasta,args.db,args.threshold,args.rep_thre,args.num_passes)
 
