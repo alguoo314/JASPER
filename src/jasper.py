@@ -53,6 +53,7 @@ def iteration(ite,db,query_path,k,test,fix,fout,tout,fixedout,database,threshold
         fixedout = fixedout[0]+"_iter"+str(ite)+"_"+fixedout[1]
 
         for seqname,seq in seq_dict.items():
+            seq = seq.upper()
             total_kmers += len(seq)-k+1
             print(seqname+":")
             rare_occurance = 0
@@ -72,6 +73,8 @@ def iteration(ite,db,query_path,k,test,fix,fout,tout,fixedout,database,threshold
                     
                 mer = jf.MerDNA(mer_string).get_canonical()
                 occurrance = qf[mer]
+                #print(mer)
+                #print(occurrance)
                 
                 if occurrance < threshold:
                     rare_occurance += 1
