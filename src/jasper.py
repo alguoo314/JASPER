@@ -12,8 +12,6 @@ import time
 def main(contigs,query_path,k,test,fix,fout,tout,fixedout,database,thre,rep_thre,num_iter):
     start = time.time()
     try:
-        threshold = thre
-        rep_region_threshold = rep_thre
         db = database
         if ((contigs == None and database == None) or (contigs != None and database != None)): 
             sys.stderr.write("Wrong arguments. One and only one between the contigs and database argument should be given. ")
@@ -24,7 +22,7 @@ def main(contigs,query_path,k,test,fix,fout,tout,fixedout,database,thre,rep_thre
         print("Threshold =  {}".format(threshold))
         print("Threshold for Repetitive Region=  {}".format(rep_region_threshold))
         for ite in range(num_iter):
-            query_path = iteration(ite,db,query_path,k,test,fix,fout,tout,fixedout,database,thre,rep_thre)
+            query_path = iteration(ite,db,query_path,k,test,fix,fout,tout,fixedout,database,threshold,rep_region_threshold)
         end = time.time()
         print(end - start)
     except:
@@ -73,9 +71,6 @@ def iteration(ite,db,query_path,k,test,fix,fout,tout,fixedout,database,threshold
                     
                 mer = jf.MerDNA(mer_string).get_canonical()
                 occurrance = qf[mer]
-                #print(mer)
-                #print(occurrance)
-                
                 if occurrance < threshold:
                     rare_occurance += 1
                     if backtracked == True:
@@ -200,7 +195,9 @@ def iteration(ite,db,query_path,k,test,fix,fout,tout,fixedout,database,threshold
         exception_type, exception_object, exception_traceback = sys.exc_info()
         line_number = exception_traceback.tb_lineno
         print(line_number)
-        print(sys.exc_info()) #to help debug                           
+        print(sys.exc_info()) #to help debug
+        print(jf.MerDNA(seq[j:k+j]).get_canonical())
+        print(seq[j:k+j])
         sys.exit(1)
 
 
