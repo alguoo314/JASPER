@@ -224,32 +224,35 @@ def jellyfish(contigs,database,k,thre,rep_thre):
         contigs = ' '.join(contig_file for contig_file in contigs)
         #print(contigs)
         os.system("jellyfish count -s 300000000 -t 32 -m {} -C -o {} {}".format(k,db_name,contigs))
-    os.system("jellyfish histo -t 32 {}> {}".format(db_name,base_name+".csv"))
-    found_thres = False
-    with open(base_name+".csv",'r') as histo:
-        if thre != None and rep_thre!=None:
-            return thre,rep_thre,db_name
-        csvreader = csv.reader(histo,delimiter=' ')
-        for row in csvreader:
-            if count >= int(row[-1]) and found_thres == False:
-                count = int(row[-1])
-                threshold = int(int(row[0])/2)
-            elif found_thres == False: #found the local min, left to find next local max
-                found_thres = True
-                count = int(row[-1])
-            elif count >= int(row[-1]) and found_thres == True:
-                repetitive_seq_thr = int(int(row[0])*2)
-                if thre == None and rep_thre!=None:
-                    return threshold,rep_thre,db_name
-                elif thre != None and rep_thre==None:
-                    return thre,repetitive_seq_thr,db_name
-                elif thre == None and rep_thre==None:
-                    return threshold,repetitive_seq_thr,db_name
+    if thre != None and rep_thre!=None:
+        return thre,rep_thre,db_name
+    else:
+        found_thres = False
+        os.system("jellyfish histo -t 32 {}> {}".format(db_name,base_name+".csv"))
+        with open(base_name+".csv",'r') as histo:
+            if thre != None and rep_thre!=None:
+                return thre,rep_thre,db_name
+            csvreader = csv.reader(histo,delimiter=' ')
+            for row in csvreader:
+                if count >= int(row[-1]) and found_thres == False:
+                    count = int(row[-1])
+                    threshold = int(int(row[0])/2)
+                elif found_thres == False: #found the local min, left to find next local max
+                    found_thres = True
+                    count = int(row[-1])
+                elif count >= int(row[-1]) and found_thres == True:
+                    repetitive_seq_thr = int(int(row[0])*2)
+                    if thre == None and rep_thre!=None:
+                        return threshold,rep_thre,db_name
+                    elif thre != None and rep_thre==None:
+                        return thre,repetitive_seq_thr,db_name
+                    elif thre == None and rep_thre==None:
+                        return threshold,repetitive_seq_thr,db_name
+                    else:
+                        print("Error")
+                        return(None)
                 else:
-                    print("Error")
-                    return(None)
-            else:
-                count = int(row[-1])
+                    count = int(row[-1])
                 
 
 
