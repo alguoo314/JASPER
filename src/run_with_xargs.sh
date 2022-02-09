@@ -1,3 +1,4 @@
+
 #!/bin/bash
 MYPATH="`dirname \"$0\"`"
 MYPATH="`( cd \"$MYPATH\" && pwd )`"
@@ -75,6 +76,12 @@ do
 done
 
 
+#calculate the threshold
+log "Determining the lower threshold for bad kmers"
+jellyfish histo -t 32 $JF_DB > jfhisto.csv
+THRESOLD=$(python jellyfish.py  jfhisto.csv)
+rm jfhisto.csv
+
 #create batches
 if [ ! -e jasper.split.success ];then 
 log "Splitting query into batches for parallel execution"
@@ -92,7 +99,7 @@ if [ ! -e jasper.correct.success ];then
 log "Polishing"
 cat $JF_DB > /dev/null && \
 echo "#!/bin/bash" >run.sh && \
-echo "$CMD --db $JF_DB --query \$1 --ksize 25 --fix --fout \$1.fix.csv -ff \$1.fixed.fa.tmp -thre 10 -rep_thre 10000000000 1>jasper.out 2>jasper.err && mv _iter1_\$1.fixed.fa.tmp _iter1_\$1.fixed.fa" >>run.sh && \
+echo "$CMD --db $JF_DB --query \$1 --ksize 25 --fix --fout \$1.fix.csv -ff \$1.fixed.fa.tmp -thre $THRESOLD  1>jasper.out 2>jasper.err && mv _iter1_\$1.fixed.fa.tmp _iter1_\$1.fixed.fa" >>run.sh && \
 chmod 0755 run.sh && \
 ls $QUERY.batch.*.fa | xargs -P $NUM_THREADS -I{} ./run.sh {} && \
 rm -f run.sh && \

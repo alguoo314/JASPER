@@ -9,7 +9,7 @@ import dna_jellyfish as jf
 import textwrap
 import time
 
-def main(contigs,query_path,k,test,fix,fout,tout,fixedout,database,thre,rep_thre,num_iter):
+def main(contigs,query_path,k,test,fix,fout,tout,fixedout,database,thre,num_iter):
     start = time.time()
     try:
         db = database
@@ -17,12 +17,11 @@ def main(contigs,query_path,k,test,fix,fout,tout,fixedout,database,thre,rep_thre
             sys.stderr.write("Wrong arguments. One and only one between the contigs and database argument should be given. ")
             return
         
-        threshold,rep_region_threshold,db = jellyfish(contigs, database, k,thre,rep_thre)
+        threshold,db = jellyfish(contigs, database, k,thre)
         
         print("Threshold =  {}".format(threshold))
-        print("Threshold for Repetitive Region=  {}".format(rep_region_threshold))
         for ite in range(num_iter):
-            query_path = iteration(ite,db,query_path,k,test,fix,fout,tout,fixedout,database,threshold,rep_region_threshold)
+            query_path = iteration(ite,db,query_path,k,test,fix,fout,tout,fixedout,database,threshold)
         end = time.time()
         print(end - start)
     except:
@@ -33,7 +32,7 @@ def main(contigs,query_path,k,test,fix,fout,tout,fixedout,database,thre,rep_thre
          sys.exit(1)         
             
 
-def iteration(ite,db,query_path,k,test,fix,fout,tout,fixedout,database,threshold,rep_region_threshold):   
+def iteration(ite,db,query_path,k,test,fix,fout,tout,fixedout,database,threshold):   
     try:    
         qf  = jf.QueryMerFile(db)
         seq_dict = parse_fasta(query_path)
@@ -95,30 +94,10 @@ def iteration(ite,db,query_path,k,test,fix,fout,tout,fixedout,database,threshold
                         kmer_count = qf[jf.MerDNA(seq[i:k+i]).get_canonical()]
                         
                     good_after = i #the first base of the first good kmer after the mismatch
+                    #A kmer is bad if it is below the threshold AND its count is less than 1/2 of the good k-mers before
                     too_low_flag = False
-                    rep_as_diploid_flag = False
-                    #A kmer is bad if it is below the threshold AND its count is less than 1/2 of the good k-mers before it AND its previous good kmer is not from a repetitive region (special case apply).
-                
                     if (qf[jf.MerDNA(seq[good_before-k+2:good_before+2]).get_canonical()] < threshold/2) and (qf[jf.MerDNA(seq[good_before-k+3:good_before+3]).get_canonical()] < threshold/2):
-                        too_low_flag = True #this case has higher priority than the rep_as_diploid_flag case. This flag itself has no use debugginh
-                    elif prev_good_count > rep_region_threshold:
-                        #repetitive region
-                        #i=good_after
-                        #continue
-                        #jan 14 revision, directly consider it as diploid case
-                        if len([*range(max(0,good_before-k+2),good_after)]) < k-1:
-                            rep_as_diploid_flag = True
-                        else:
-                            too_low_flag =  False
-                            t = good_before+1
-                            while t-k+1 < good_after:
-                                if qf[jf.MerDNA(seq[t-k+2:t+2]).get_canonical()] < threshold/2 and qf[jf.MerDNA(seq[t-k+3:t+3]).get_canonical()] < threshold/2:
-                                    good_before = t
-                                    too_low_flag = True
-                                    break
-                                t+=1
-                            if too_low_flag != True:
-                                continue
+                        too_low_flag = True #this case has higher priority. Flag just for debugging purpose
                     else:  #nonrepetitive region case without a too low kmer count case
                         while  qf[jf.MerDNA(seq[good_before-k+2:good_before+2]).get_canonical()] >= prev_good_count/2 and good_before-k+1 < good_after:
                             if good_before == -1:
@@ -136,7 +115,7 @@ def iteration(ite,db,query_path,k,test,fix,fout,tout,fixedout,database,threshold
                     wrong_kmers_list.extend([*range(max(0,good_before-k+2),good_after)])
                     
                     if fix == True:
-                        seq,fixed_base,original,fixed_ind = fixing_sid(rep_as_diploid_flag,seq,to_be_fixed,k,threshold,qf,len([*range(max(0,good_before-k+2),good_after)]),good_before,good_after) #fix simple sub/insert/del cases
+                        seq,fixed_base,original,fixed_ind = fixing_sid(seq,to_be_fixed,k,threshold,qf,len([*range(max(0,good_before-k+2),good_after)]),good_before,good_after) #fix simple sub/insert/del cases
                         if fixed_base != "nN":
                             if len(fixed_ind) == 1:
                                 fixed_bases_list.append([seqname,fixed_ind[0],fixed_base,original])
@@ -212,7 +191,7 @@ def split_output(seq, num_per_line=60): #make a new line after num_per_line base
 
          
 
-def jellyfish(contigs,database,k,thre,rep_thre):
+def jellyfish(contigs,database,k,thre):
     count = math.inf
     threshold = 0
     if database != None:
@@ -224,46 +203,29 @@ def jellyfish(contigs,database,k,thre,rep_thre):
         contigs = ' '.join(contig_file for contig_file in contigs)
         #print(contigs)
         os.system("jellyfish count -s 300000000 -t 32 -m {} -C -o {} {}".format(k,db_name,contigs))
-    if thre != None and rep_thre!=None:
-        return thre,rep_thre,db_name
+    if thre != None:
+        return thre,db_name
     else:
-        found_thres = False
         os.system("jellyfish histo -t 32 {}> {}".format(db_name,base_name+".csv"))
         with open(base_name+".csv",'r') as histo:
-            if thre != None and rep_thre!=None:
-                return thre,rep_thre,db_name
             csvreader = csv.reader(histo,delimiter=' ')
             for row in csvreader:
-                if count >= int(row[-1]) and found_thres == False:
+                if count >= int(row[-1]):
                     count = int(row[-1])
                     threshold = int(int(row[0])/2)
-                elif found_thres == False: #found the local min, left to find next local max
-                    found_thres = True
-                    count = int(row[-1])
-                elif count >= int(row[-1]) and found_thres == True:
-                    repetitive_seq_thr = int(int(row[0])*2)
-                    if thre == None and rep_thre!=None:
-                        return threshold,rep_thre,db_name
-                    elif thre != None and rep_thre==None:
-                        return thre,repetitive_seq_thr,db_name
-                    elif thre == None and rep_thre==None:
-                        return threshold,repetitive_seq_thr,db_name
-                    else:
-                        print("Error")
-                        return(None)
-                else:
-                    count = int(row[-1])
+                else: #found local min
+                    return threshold,db_name
                 
 
 
 
-def fixing_sid(rep_as_diploid_flag,seq,to_be_fixed,k,threshold,qf,num_below_thres_kmers,good_before,good_after):
+def fixing_sid(seq,to_be_fixed,k,threshold,qf,num_below_thres_kmers,good_before,good_after):
     try:
         fixed_base = "nN"
         original = '-'
         fixed_ind = None
 
-        if num_below_thres_kmers == k and rep_as_diploid_flag == False: #substitution or insertion
+        if num_below_thres_kmers == k: #substitution or insertion
             b = fix_k_case_sub(to_be_fixed,k,threshold,qf)
             if b !=  None:
                 original = "s"+seq[good_after-1]
@@ -280,7 +242,7 @@ def fixing_sid(rep_as_diploid_flag,seq,to_be_fixed,k,threshold,qf,num_below_thre
                     fixed_base = '-'
                     fixed_ind = [good_after-2]
                                     
-        if num_below_thres_kmers == k-1 and rep_as_diploid_flag == False: 
+        if num_below_thres_kmers == k-1: 
            removed_base = fix_del(to_be_fixed,k,threshold,qf)
            if removed_base != None: #deletion of a base
                original = "d-"
@@ -303,7 +265,7 @@ def fixing_sid(rep_as_diploid_flag,seq,to_be_fixed,k,threshold,qf,num_below_thre
                   fixed_base = b
                   fixed_ind = [good_after-1+i]
                   #try to fix by substitution of one base of one side of the bad stretch
-        if num_below_thres_kmers < k-1 and len(to_be_fixed)>=k:#skip the good_before = -1 case. Repetitive case is addressed here (ie shortcut is true)
+        if num_below_thres_kmers < k-1 and len(to_be_fixed)>=k:#skip the good_before = -1 case.
             left,right,l_or_r =  fixhetero(to_be_fixed,k,threshold,qf)
             if l_or_r !=  None: #diploidy
                 if l_or_r == "b": #b stands for both bases are changed
@@ -556,7 +518,6 @@ if __name__ == '__main__':
     parser.add_argument("--reads",nargs='+',default = None, help="The path to the .fasta file(s）containing the contigs to build the jellyfish database. Not needed if --db is provided")
     parser.add_argument("-q","--query", help = "The path to the .fasta query file")
     parser.add_argument("-thre","--threshold", type=int, default = None, help = "The threshold for a bad kmer.")
-    parser.add_argument("-rep_thre", type=int, default = None, help = "The threshold  of occurrance for a kmer at a repeitive region.")
     parser.add_argument("-k","--ksize", type=int,help = "The kmer size")
     parser.add_argument("--test", action='store_true',help = "Ouput the indexes of bad kmers, total num of bad kmers, and an estimation for Q value")
     parser.add_argument("--fix", action='store_true', help="Output the index of fixed bases and output the new sequence")
@@ -565,5 +526,5 @@ if __name__ == '__main__':
     parser.add_argument("--tout", default = "tout.csv", help = "The output file containing the locations of bad kmers")
     parser.add_argument("-p","--num_passes", type=int, default = 2, help = "The number of iterations of fixing.")
     args = parser.parse_args()
-    main(args.reads,args.query,args.ksize,args.test,args.fix,args.fout,args.tout,args.fixedfasta,args.db,args.threshold,args.rep_thre,args.num_passes)
+    main(args.reads,args.query,args.ksize,args.test,args.fix,args.fout,args.tout,args.fixedfasta,args.db,args.threshold,args.num_passes)
 
