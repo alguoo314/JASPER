@@ -75,12 +75,13 @@ do
     shift
 done
 
-
 #calculate the threshold
+if [ ! -e jasper.threshold.success ];then
 log "Determining the lower threshold for bad kmers"
-jellyfish histo -t 32 $JF_DB > jfhisto.csv
-THRESOLD=$(python jellyfish.py  jfhisto.csv)
-rm jfhisto.csv
+jellyfish histo -t $NUM_THREADS $JF_DB > jfhisto.csv && \
+jellyfish.py  jfhisto.csv > threshold.txt && \
+rm jfhisto.csv && touch jasper.threshold.success
+fi
 
 #create batches
 if [ ! -e jasper.split.success ];then 
@@ -99,7 +100,7 @@ if [ ! -e jasper.correct.success ];then
 log "Polishing"
 cat $JF_DB > /dev/null && \
 echo "#!/bin/bash" >run.sh && \
-echo "$CMD --db $JF_DB --query \$1 --ksize 25 --fix --fout \$1.fix.csv -ff \$1.fixed.fa.tmp -thre $THRESOLD  1>jasper.out 2>jasper.err && mv _iter1_\$1.fixed.fa.tmp _iter1_\$1.fixed.fa" >>run.sh && \
+echo "$CMD --db $JF_DB --query \$1 --ksize 25 --fix --fout \$1.fix.csv -ff \$1.fixed.fa.tmp -thre `head -n 1 threshold.txt| awk '{print $1}'` 1>jasper.out 2>jasper.err && mv _iter1_\$1.fixed.fa.tmp _iter1_\$1.fixed.fa" >>run.sh && \
 chmod 0755 run.sh && \
 ls $QUERY.batch.*.fa | xargs -P $NUM_THREADS -I{} ./run.sh {} && \
 rm -f run.sh && \

@@ -32,4 +32,4 @@ all_tests_SOURCES = unittests/gtest/gtest-all.cc unittests/gtest/gtest_main.cc u
 
 all_tests_SOURCES += unittests/test_trivial.cc
 
-dist_bin_SCRIPTS = src/run_with_xargs.sh src/jasper.py
+dist_bin_SCRIPTS = src/run_with_xargs.sh src/jasper.py src/jellyfish.py
