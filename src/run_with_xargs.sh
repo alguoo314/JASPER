@@ -76,6 +76,10 @@ do
 done
 
 #calculate the threshold
+if [ ! -s $PYTHONPATH/jellyfish.py ];then
+error_exit "jellyfish.py not found at python library path $PYTHONPATH, or path is not set; please refer to https://github.com/gmarcais/Jellyfish for instructions on setting the variable."
+fi
+
 if [ ! -e jasper.threshold.success ];then
 log "Determining the lower threshold for bad kmers"
 jellyfish histo -t $NUM_THREADS $JF_DB > jfhisto.csv && \
