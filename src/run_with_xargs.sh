@@ -38,7 +38,7 @@ function usage {
     echo  "-t, --threads=uint32             Number of threads (1)"
     echo "-a --assembly                    *Path to the assembly file"
     echo "-j --jf                          Path to the jellyfish database file. Required if --reads is not provided"
-    echo "-r --reads                       Path to the file containing the reads to construct a jellyfish database. Required if --jf is not provided"
+    echo "-r --reads                       Path to the file(s) containing the reads to construct a jellyfish database. Required if --jf is not provided"
     echo "-k, --kmer=uint64                *k-mer size"
     echo "-p, --num_passes=utint16         The number of iterations of running jasper for fixing (2). A number smaller than 6 is usually more than sufficient" 
     echo "-h, --help                       This message"
@@ -67,7 +67,21 @@ do
             JF_DB="$2";
             shift
             ;;
-        -k|--kmer)
+	-r|--reads)
+	    reads_files=( )
+	    while (( "$#" >= 2 )) && ! [[ $2 = --* ]]; do
+		reads_files+=( "$2" )
+		shift
+	    done
+	    export READS=$reads_files
+	    echo $reads_files
+	    shift
+	    ;;
+        -p|--num_passes)
+            export PASSES="$2";
+            shift
+            ;;
+	-k|--kmer)
             export KMER="$2";
             shift
             ;;
@@ -96,12 +110,31 @@ if [ $BATCH_SIZE -lt 1 ];then
   log "Using BATCH SIZE $BATCH_SIZE"
 fi
 
+
+
+#Create database if the reads file is given instead of a database file             
+if [ -z ${JF_DB+x} ];then
+    if [! -z ${READS+x} ];then
+	base=$(basename "$READS[0]")
+	JF_DB = $base.jf
+	jellyfish count -s 300000000 -t $NUM_THREADS -m $KMER -C -o $JF_DB $READS
+    else
+	error_exit "Either a jf database or files of reads must be provided in the argument."
+    fi
+fi
+
+
+
+
+
 if [ ! -e jasper.threshold.success ];then
 log "Determining the lower threshold for bad kmers"
 jellyfish histo -t $NUM_THREADS $JF_DB > jfhisto.csv && \
 jellyfish.py  jfhisto.csv > threshold.txt && \
 rm jfhisto.csv && touch jasper.threshold.success
 fi
+
+
 
 #create batches
 if [ ! -e jasper.split.success ];then 
@@ -116,7 +149,7 @@ if [ ! -e jasper.correct.success ];then
 log "Polishing"
 cat $JF_DB > /dev/null && \
 echo "#!/bin/bash" >run.sh && \
-echo "$CMD --db $JF_DB --query \$1 --ksize 25 --fix --fout \$1.fix.csv -ff \$1.fixed.fa.tmp -thre `head -n 1 threshold.txt| awk '{print $1}'` 1>jasper.out 2>jasper.err && mv _iter1_\$1.fixed.fa.tmp _iter1_\$1.fixed.fa" >>run.sh && \
+echo "$CMD --db $JF_DB --query \$1 --ksize 25 -p $PASSES --fix --fout \$1.fix.csv -ff \$1.fixed.fa.tmp -thre `head -n 1 threshold.txt| awk '{print $1}'` 1>jasper.out 2>jasper.err && mv _iter1_\$1.fixed.fa.tmp _iter1_\$1.fixed.fa" >>run.sh && \
 chmod 0755 run.sh && \
 ls $QUERY.batch.*.fa | xargs -P $NUM_THREADS -I{} ./run.sh {} && \
 rm -f run.sh && \
