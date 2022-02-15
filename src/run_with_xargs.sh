@@ -1,4 +1,3 @@
-
 #!/bin/bash
 MYPATH="`dirname \"$0\"`"
 MYPATH="`( cd \"$MYPATH\" && pwd )`"
@@ -32,7 +31,19 @@ function error_exit {
 }
 
 function usage {
-echo "Usage:"
+    echo "Usage: bash run_with_xargs.sh [options]"
+    echo "Options:"
+    echo "Options (default value in (), *required):"
+    echo "-b, --batch=uint64               Desired batch size for the query (default value based on number of threads and assembly size)"
+    echo  "-t, --threads=uint32             Number of threads (1)"
+    echo "-a --assembly                    *Path to the assembly file"
+    echo "-j --jf                          Path to the jellyfish database file. Required if --reads is not provided"
+    echo "-r --reads                       Path to the file containing the reads to construct a jellyfish database. Required if --jf is not provided"
+    echo "-k, --kmer=uint64                *k-mer size"
+    echo "-p, --num_passes=utint16         The number of iterations of running jasper for fixing (2). A number smaller than 6 is usually more than sufficient" 
+    echo "-h, --help                       This message"
+    echo "-v, --verbose                    Output information (False)"
+    
 }
 
 while [[ $# > 0 ]]
@@ -80,6 +91,11 @@ if [ ! -s $PYTHONPATH/jellyfish.py ];then
 error_exit "jellyfish.py not found at python library path $PYTHONPATH, or path is not set; please refer to https://github.com/gmarcais/Jellyfish for instructions on setting the variable."
 fi
 
+if [ $BATCH_SIZE -lt 1 ];then
+  BATCH_SIZE=`grep -v '^>' $QUERY | tr -d '\n' |wc |awk '{print int($3/'$NUM_THREADS'*.7)}'`
+  log "Using BATCH SIZE $BATCH_SIZE"
+fi
+
 if [ ! -e jasper.threshold.success ];then
 log "Determining the lower threshold for bad kmers"
 jellyfish histo -t $NUM_THREADS $JF_DB > jfhisto.csv && \
@@ -90,10 +106,6 @@ fi
 #create batches
 if [ ! -e jasper.split.success ];then 
 log "Splitting query into batches for parallel execution"
-if [ $BATCH_SIZE -lt 1 ];then
-  BATCH_SIZE=`grep -v '^>' $QUERY |wc | tr -d '\n' |awk '{print int($3/'$NUM_THREADS'*.7)}'`
-fi
-log "Using BATCH SIZE $BATCH_SIZE"
 rm -f $QUERY.batch.*.fa && \
 perl -ane 'BEGIN{$seq="";$bs=int('$BATCH_SIZE');}{if($F[0] =~ /^>/){if(not($seq eq "")){for($ci=0;$ci<length($seq);$ci+=$bs){print "$ctg:$ci\n",substr($seq,$ci,$bs),"\n";}}$ctg=$F[0];$seq=""}else{$seq.=$F[0]}}END{if(not($seq eq "")){for($ci=0;$ci<length($seq);$ci+=$bs){print "$ctg:$ci\n",substr($seq,$ci,$bs),"\n";}}}' $QUERY | \
 perl -ane 'BEGIN{$batch_index=0;$output=0;open(FILE,">'$QUERY'.batch.".$batch_index.".fa");}{if($F[0]=~/^>/){if($output>int('$BATCH_SIZE')){close(FILE);$batch_index++;open(FILE,">'$QUERY'.batch.".$batch_index.".fa");$output=0;}}else{$output+=length($F[0]);}print FILE join(" ",@F),"\n";}' && \
@@ -113,7 +125,7 @@ fi
 
 if [ ! -e jasper.join.success ];then
 log "Joining"
-cat _iter1_$QUERY.batch.*.fa.fixed.fa | perl -ane 'BEGIN{$seq="";$bs=int('$BATCH_SIZE');}{if($F[0] =~ /^>/){if(not($seq eq "")){$h{$ctg}=$seq;$seq=""}$ctg=$F[0]}else{$seq.=$F[0]}}END{$h{$ctg}=$seq;foreach $c(keys %h){if($c =~ /\:0$/){@f=split(/:/,$c);$ctg=join(":",@f[0..($#f-1)]);print "$ctg\n";$b=0;while(defined($h{$ctg.":$b"})){print $h{$ctg.":$b"};$b+=$bs;}print "\n";}}}' > $QUERY.fixed.fasta.tmp && mv  $QUERY.fixed.fasta.tmp  $QUERY.fixed.fasta && \
+cat _iter1_$QUERY.batch.*.fa.fixed.fa | perl -ane 'BEGIN{$seq="";$bs=int('$BATCH_SIZE');$bs=1 if($bs<=0);}{if($F[0] =~ /^>/){if(not($seq eq "")){$h{$ctg}=$seq;$seq=""}$ctg=$F[0]}else{$seq.=$F[0]}}END{$h{$ctg}=$seq;foreach $c(keys %h){if($c =~ /\:0$/){@f=split(/:/,$c);$ctg=join(":",@f[0..($#f-1)]);print "$ctg\n";$b=0;while(defined($h{$ctg.":$b"})){print $h{$ctg.":$b"};$b+=$bs;}print "\n";}}}' > $QUERY.fixed.fasta.tmp && mv  $QUERY.fixed.fasta.tmp  $QUERY.fixed.fasta && \
 rm -f _iter?_$QUERY.batch.*.fa.fixed.fa $QUERY.batch.*.fa && \
 log "Polished sequence is in $QUERY.fixed.fasta" && \
 touch jasper.join.success
