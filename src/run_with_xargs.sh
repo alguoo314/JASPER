@@ -69,7 +69,7 @@ do
             ;;
 	-r|--reads)
 	    export READS="$2"
-	    export JF_SIZE=`stat -c%s $READS |awk '{n+=$1}END{print n*10}'`
+	    export JF_SIZE=`stat -c%s $READS |awk '{n+=$1}END{print int(n/4)}'`
 	    shift
 	    ;;
         -p|--num_passes)
