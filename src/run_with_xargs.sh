@@ -61,6 +61,8 @@ do
             ;;
         -a|--assembly)
             export QUERY="$2"
+	    QUERY_FN=`basename $QUERY`
+	    export QUERY_FN=${QUERY_FN%.*}
             shift
             ;;
         -j|--jf)
@@ -137,9 +139,9 @@ fi
 #create batches
 if [ ! -e jasper.split.success ];then 
 log "Splitting query into batches for parallel execution"
-rm -f $QUERY.batch.*.fa && \
+rm -f $QUERY_FN.batch.*.fa && \
 perl -ane 'BEGIN{$seq="";$bs=int('$BATCH_SIZE');}{if($F[0] =~ /^>/){if(not($seq eq "")){for($ci=0;$ci<length($seq);$ci+=$bs){print "$ctg:$ci\n",substr($seq,$ci,$bs),"\n";}}$ctg=$F[0];$seq=""}else{$seq.=$F[0]}}END{if(not($seq eq "")){for($ci=0;$ci<length($seq);$ci+=$bs){print "$ctg:$ci\n",substr($seq,$ci,$bs),"\n";}}}' $QUERY | \
-perl -ane 'BEGIN{$batch_index=0;$output=0;open(FILE,">'$QUERY'.batch.".$batch_index.".fa");}{if($F[0]=~/^>/){if($output>int('$BATCH_SIZE')){close(FILE);$batch_index++;open(FILE,">'$QUERY'.batch.".$batch_index.".fa");$output=0;}}else{$output+=length($F[0]);}print FILE join(" ",@F),"\n";}' && \
+perl -ane 'BEGIN{$batch_index=0;$output=0;open(FILE,">'$QUERY_FN'.batch.".$batch_index.".fa");}{if($F[0]=~/^>/){if($output>int('$BATCH_SIZE')){close(FILE);$batch_index++;open(FILE,">'$QUERY_FN'.batch.".$batch_index.".fa");$output=0;}}else{$output+=length($F[0]);}print FILE join(" ",@F),"\n";}' && \
 touch jasper.split.success
 fi
 
@@ -149,16 +151,16 @@ cat $JF_DB > /dev/null && \
 echo "#!/bin/bash" >run.sh && \
 echo "$CMD --db $JF_DB --query \$1 --ksize 25 -p $PASSES --fix --fout \$1.fix.csv -ff \$1.fixed.fa.tmp -thre `head -n 1 threshold.txt| awk '{print $1}'` 1>jasper.out 2>jasper.err && mv _iter1_\$1.fixed.fa.tmp _iter1_\$1.fixed.fa" >>run.sh && \
 chmod 0755 run.sh && \
-ls $QUERY.batch.*.fa | xargs -P $NUM_THREADS -I{} ./run.sh {} && \
+ls $QUERY_FN.batch.*.fa | xargs -P $NUM_THREADS -I{} ./run.sh {} && \
 rm -f run.sh && \
 touch jasper.correct.success
 fi 
 
 if [ ! -e jasper.join.success ];then
 log "Joining"
-cat _iter1_$QUERY.batch.*.fa.fixed.fa | perl -ane 'BEGIN{$seq="";$bs=int('$BATCH_SIZE');$bs=1 if($bs<=0);}{if($F[0] =~ /^>/){if(not($seq eq "")){$h{$ctg}=$seq;$seq=""}$ctg=$F[0]}else{$seq.=$F[0]}}END{$h{$ctg}=$seq;foreach $c(keys %h){if($c =~ /\:0$/){@f=split(/:/,$c);$ctg=join(":",@f[0..($#f-1)]);print "$ctg\n";$b=0;while(defined($h{$ctg.":$b"})){print $h{$ctg.":$b"};$b+=$bs;}print "\n";}}}' > $QUERY.fixed.fasta.tmp && mv  $QUERY.fixed.fasta.tmp  $QUERY.fixed.fasta && \
-rm -f _iter?_$QUERY.batch.*.fa.fixed.fa $QUERY.batch.*.fa && \
-log "Polished sequence is in $QUERY.fixed.fasta" && \
+cat _iter1_$QUERY_FN.batch.*.fa.fixed.fa | perl -ane 'BEGIN{$seq="";$bs=int('$BATCH_SIZE');$bs=1 if($bs<=0);}{if($F[0] =~ /^>/){if(not($seq eq "")){$h{$ctg}=$seq;$seq=""}$ctg=$F[0]}else{$seq.=$F[0]}}END{$h{$ctg}=$seq;foreach $c(keys %h){if($c =~ /\:0$/){@f=split(/:/,$c);$ctg=join(":",@f[0..($#f-1)]);print "$ctg\n";$b=0;while(defined($h{$ctg.":$b"})){print $h{$ctg.":$b"};$b+=$bs;}print "\n";}}}' > $QUERY_FN.fixed.fasta.tmp && mv $QUERY_FN.fixed.fasta.tmp  $QUERY_FN.fixed.fasta && \
+rm -f _iter?_$QUERY_FN.batch.*.fa.fixed.fa $QUERY_FN.batch.*.fa && \
+log "Polished sequence is in $QUERY_FN.fixed.fasta" && \
 touch jasper.join.success
 fi
 
