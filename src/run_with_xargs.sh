@@ -38,7 +38,7 @@ function usage {
     echo  "-t, --threads=uint32             Number of threads (1)"
     echo "-a --assembly                    *Path to the assembly file"
     echo "-j --jf                          Path to the jellyfish database file. Required if --reads is not provided"
-    echo "-r --reads                       Path to the file(s) containing the reads to construct a jellyfish database. Required if --jf is not provided"
+    echo "-r --reads                       Path to the file(s) containing the reads to construct a jellyfish database. If two or more files are provided, please enclose the list with  a pair of quotation marks. Required if --jf is not provided"
     echo "-k, --kmer=uint64                *k-mer size"
     echo "-p, --num_passes=utint16         The number of iterations of running jasper for fixing (2). A number smaller than 6 is usually more than sufficient" 
     echo "-h, --help                       This message"
@@ -68,13 +68,8 @@ do
             shift
             ;;
 	-r|--reads)
-	    reads_files=( )
-	    while (( "$#" >= 2 )) && ! [[ $2 = --* ]]; do
-		reads_files+=( "$2" )
-		shift
-	    done
-	    export READS=$reads_files
-	    echo $reads_files
+	    export READS="$2"
+	    export JF_SIZE=`stat -c%s $READS |awk '{n+=$1}END{print n*10}'`
 	    shift
 	    ;;
         -p|--num_passes)
@@ -114,10 +109,13 @@ fi
 
 #Create database if the reads file is given instead of a database file             
 if [ -z ${JF_DB+x} ];then
-    if [! -z ${READS+x} ];then
-	base=$(basename "$READS[0]")
-	JF_DB = $base.jf
-	jellyfish count -s 300000000 -t $NUM_THREADS -m $KMER -C -o $JF_DB $READS
+    if [ -n ${READS+x} ];then
+	stringarray=($READS)
+	firstfile=${stringarray[0]}
+	filename_with_ext=${firstfile##*/}
+	filename=${filename_with_ext%.*}
+	JF_DB="$filename.jf"
+	zcat -f $READS | jellyfish count -C -s $JF_SIZE -m 25 -o $JF_DB -t $NUM_THREADS
     else
 	error_exit "Either a jf database or files of reads must be provided in the argument."
     fi
