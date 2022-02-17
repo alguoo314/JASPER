@@ -5,7 +5,7 @@ export PATH=$MYPATH:$PATH;
 NUM_THREADS=1
 CMD=jasper.py
 BATCH_SIZE=0
-
+PASSES=2
 if tty -s < /dev/fd/1 2> /dev/null; then
     GC='\e[0;32m'
     RC='\e[0;31m'
@@ -103,7 +103,7 @@ error_exit "jellyfish.py not found at python library path $PYTHONPATH, or path i
 fi
 
 if [ $BATCH_SIZE -lt 1 ];then
-  BATCH_SIZE=`grep -v '^>' $QUERY | tr -d '\n' |wc |awk '{print int($3/'$NUM_THREADS'*.7)}'`
+  BATCH_SIZE=`grep -v '^>' $QUERY | tr -d '\n' |wc |awk '{print int($3/'$NUM_THREADS'*.9)}'`
   log "Using BATCH SIZE $BATCH_SIZE"
 fi
 
