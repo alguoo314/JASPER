@@ -117,7 +117,7 @@ if [ -z ${JF_DB+x} ];then
 	filename_with_ext=${firstfile##*/}
 	filename=${filename_with_ext%.*}
 	JF_DB="$filename.jf"
-	zcat -f $READS | jellyfish count -C -s $JF_SIZE -m 25 -o $JF_DB -t $NUM_THREADS
+	zcat -f $READS | jellyfish count -C -s $JF_SIZE -m 25 -o $JF_DB -t $NUM_THREADS /dev/stdin
     else
 	error_exit "Either a jf database or files of reads must be provided in the argument."
     fi
