@@ -61,8 +61,7 @@ do
             ;;
         -a|--assembly)
             export QUERY="$2"
-	    QUERY_FN=`basename $QUERY`
-	    export QUERY_FN=${QUERY_FN%.*}
+	    export QUERY_FN=`basename $QUERY`
             shift
             ;;
         -j|--jf)
@@ -108,24 +107,20 @@ if [ $BATCH_SIZE -lt 1 ];then
 fi
 
 
-
 #Create database if the reads file is given instead of a database file             
 if [ -z ${JF_DB+x} ];then
-    if [ -n ${READS+x} ];then
-	stringarray=($READS)
-	firstfile=${stringarray[0]}
-	filename_with_ext=${firstfile##*/}
-	filename=${filename_with_ext%.*}
-	JF_DB="$filename.jf"
-	zcat -f $READS | jellyfish count -C -s $JF_SIZE -m 25 -o $JF_DB -t $NUM_THREADS /dev/stdin
+  if [ -n ${READS+x} ];then
+        JF_DB="mer_counts.jf"
+        if [ -s "mer_counts.jf" ];then
+          log "Using existing jellyfish database mer_counts.jf"
+        else
+          log "Creating jellyfish database mer_counts.jf"
+	  zcat -f $READS | jellyfish count -C -s $JF_SIZE -m 25 -o $JF_DB -t $NUM_THREADS /dev/stdin
+        fi
     else
 	error_exit "Either a jf database or files of reads must be provided in the argument."
     fi
 fi
-
-
-
-
 
 if [ ! -e jasper.threshold.success ];then
 log "Determining the lower threshold for bad kmers"
@@ -133,8 +128,6 @@ jellyfish histo -t $NUM_THREADS $JF_DB > jfhisto.csv && \
 jellyfish.py  jfhisto.csv > threshold.txt && \
 rm jfhisto.csv && touch jasper.threshold.success
 fi
-
-
 
 #create batches
 if [ ! -e jasper.split.success ];then 
@@ -158,8 +151,9 @@ fi
 
 if [ ! -e jasper.join.success ];then
 log "Joining"
-cat _iter1_$QUERY_FN.batch.*.fa.fixed.fa | perl -ane 'BEGIN{$seq="";$bs=int('$BATCH_SIZE');$bs=1 if($bs<=0);}{if($F[0] =~ /^>/){if(not($seq eq "")){$h{$ctg}=$seq;$seq=""}$ctg=$F[0]}else{$seq.=$F[0]}}END{$h{$ctg}=$seq;foreach $c(keys %h){if($c =~ /\:0$/){@f=split(/:/,$c);$ctg=join(":",@f[0..($#f-1)]);print "$ctg\n";$b=0;while(defined($h{$ctg.":$b"})){print $h{$ctg.":$b"};$b+=$bs;}print "\n";}}}' > $QUERY_FN.fixed.fasta.tmp && mv $QUERY_FN.fixed.fasta.tmp  $QUERY_FN.fixed.fasta && \
-rm -f _iter?_$QUERY_FN.batch.*.fa.fixed.fa $QUERY_FN.batch.*.fa && \
+LAST_IT=$(($PASSES-1))
+cat _iter${LAST_IT}_$QUERY_FN.batch.*.fa.fixed.fa | perl -ane 'BEGIN{$seq="";$bs=int('$BATCH_SIZE');$bs=1 if($bs<=0);}{if($F[0] =~ /^>/){if(not($seq eq "")){$h{$ctg}=$seq;$seq=""}$ctg=$F[0]}else{$seq.=$F[0]}}END{$h{$ctg}=$seq;foreach $c(keys %h){if($c =~ /\:0$/){@f=split(/:/,$c);$ctg=join(":",@f[0..($#f-1)]);print "$ctg\n";$b=0;while(defined($h{$ctg.":$b"})){print $h{$ctg.":$b"};$b+=$bs;}print "\n";}}}' > $QUERY_FN.fixed.fasta.tmp && mv $QUERY_FN.fixed.fasta.tmp  $QUERY_FN.fixed.fasta && \
+rm -f _iter*_$QUERY_FN.batch.*.fa.fixed.fa $QUERY_FN.batch.*.fa && \
 log "Polished sequence is in $QUERY_FN.fixed.fasta" && \
 touch jasper.join.success
 fi
