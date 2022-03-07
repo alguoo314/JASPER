@@ -7,10 +7,8 @@ import math
 import csv
 import dna_jellyfish as jf
 import textwrap
-import time
 
 def main(contigs,query_path,k,test,fix,fout,tout,fixedout,database,thre,num_iter):
-    start = time.time()
     try:
         db = database
         if ((contigs == None and database == None) or (contigs != None and database != None)): 
@@ -22,8 +20,6 @@ def main(contigs,query_path,k,test,fix,fout,tout,fixedout,database,thre,num_iter
         print("Threshold =  {}".format(threshold))
         for ite in range(num_iter):
             query_path = iteration(ite,db,query_path,k,test,fix,fout,tout,fixedout,database,threshold)
-        end = time.time()
-        print(end - start)
     except:
          exception_type, exception_object, exception_traceback = sys.exc_info()
          line_number = exception_traceback.tb_lineno
@@ -60,18 +56,22 @@ def iteration(ite,db,query_path,k,test,fix,fout,tout,fixedout,database,threshold
             wrong_kmers_list = []                                                                                                       
             while i < len(seq)-k+1: #k is 25 :  
                 mer_string = seq[i:k+i]
-                #match = re.match("^[ACTGactg]*$",mer_string)
-                #if match is None:
-                N = mer_string.find('N')
+                N = mer_string.find('N') #ignore all kmers containing non acgt bases
                 if N >= 0:
                     i+=(N+1)
-                    rare_occurance = 0
+                    continue
+                n = mer_string.find('n')
+                if n >= 0:
+                    i+=(n+1)
+                    continue
+                match = re.match("^[ACTGactg]*$",mer_string) #other invalid characters other than N or n
+                if match is None:
+                    i +=1
                     continue
                     
                 mer = jf.MerDNA(mer_string).get_canonical()
                 occurrance = qf[mer]
                 if occurrance < threshold:
-                    rare_occurance += 1
                     if backtracked == True:
                         i+=1
                         continue
@@ -80,16 +80,14 @@ def iteration(ite,db,query_path,k,test,fix,fout,tout,fixedout,database,threshold
                     occurrance = qf[jf.MerDNA(seq[j:k+j]).get_canonical()] 
                     while occurrance < threshold and j>=0:
                         j = j-1
-                        rare_occurance += 1
                         occurrance = qf[jf.MerDNA(seq[j:k+j]).get_canonical()]
                     good_before = j+k-1 #the right base of a good kmer
                     prev_good_count = qf[jf.MerDNA(seq[j:k+j]).get_canonical()]
                     kmer_count = qf[jf.MerDNA(seq[i:k+i]).get_canonical()]                                                            
-                    #go forward back to i
 
                     if j == -1: #even the first kmer is bad                                                                                                                                 
                         good_before = -1
-                    while kmer_count < threshold and i < len(seq)-k+1:
+                    while kmer_count < threshold and i < len(seq)-k+1: #go forward back to i
                         i+=1
                         kmer_count = qf[jf.MerDNA(seq[i:k+i]).get_canonical()]
                         
@@ -97,21 +95,20 @@ def iteration(ite,db,query_path,k,test,fix,fout,tout,fixedout,database,threshold
                     #A kmer is bad if it is below the threshold AND its count is less than 1/2 of the good k-mers before
                     too_low_flag = False
                     if (qf[jf.MerDNA(seq[good_before-k+2:good_before+2]).get_canonical()] < threshold/2) and (qf[jf.MerDNA(seq[good_before-k+3:good_before+3]).get_canonical()] < threshold/2):
-                        too_low_flag = True #this case has higher priority. Flag just for debugging purpose
-                    else:  #nonrepetitive region case without a too low kmer count case
-                        while  qf[jf.MerDNA(seq[good_before-k+2:good_before+2]).get_canonical()] >= prev_good_count/2 and good_before-k+1 < good_after:
+                        too_low_flag = True #Below absolute thres = (relative) threshold/2, then it is an error kmer even if  it's > previous kemr count/2. Flag just for debugging purpose
+                    else:
+                        while  qf[jf.MerDNA(seq[good_before-k+2:good_before+2]).get_canonical()] >= prev_good_count/2 and good_before-k+1 < good_after: #kmer count > prev kmer count/2, then not a bad kmer.
                             if good_before == -1:
                                 break
                             if (prev_good_count >= threshold/2 and (qf[jf.MerDNA(seq[good_before-k+2:good_before+2]).get_canonical()] < threshold/2) and (qf[jf.MerDNA(seq[good_before-k+3:good_before+3]).get_canonical()] < threshold/2)):
                                 too_low_flag = True
                                 break
+                            #move to the next kmer
                             prev_good_count = qf[jf.MerDNA(seq[good_before-k+2:good_before+2]).get_canonical()]
                             good_before +=1                        
                         if good_before >= len(seq)-1:
                             break
                     to_be_fixed = seq[max(0,good_before-k+2):good_after+k-1]
-                    #if too_low_flag == True:
-                        #print(too_low_flag)
                     wrong_kmers_list.extend([*range(max(0,good_before-k+2),good_after)])
                     
                     if fix == True:
@@ -127,7 +124,6 @@ def iteration(ite,db,query_path,k,test,fix,fout,tout,fixedout,database,threshold
                     backtracked = False
                     good_before = i+k-1 #the right base of a good kmer                                                                                       
                     i += k
-                    #rare_occurance = 0
             
                     
             seqs.append(seq)
@@ -151,7 +147,6 @@ def iteration(ite,db,query_path,k,test,fix,fout,tout,fixedout,database,threshold
                     for ind in wrong_kmers_dict[seqname]:
                         csvwriter.writerow([seqname,ind+1]) #output index lefts with 1 instead of 0
         
-        #print(one)
         if fix == True:
             base_fields = ['Contig', 'Base_coord', 'Original',"Mutated"]
             with open(fout,'w') as csvf:
@@ -201,7 +196,6 @@ def jellyfish(contigs,database,k,thre):
         db_name = os.path.splitext(os.path.basename(contigs[0]))[0]+".jf"
         base_name = os.path.splitext(db_name)[0]
         contigs = ' '.join(contig_file for contig_file in contigs)
-        #print(contigs)
         os.system("jellyfish count -s 300000000 -t 32 -m {} -C -o {} {}".format(k,db_name,contigs))
     if thre != None:
         return thre,db_name
@@ -219,7 +213,7 @@ def jellyfish(contigs,database,k,thre):
 
 
 
-def fixing_sid(seq,to_be_fixed,k,threshold,qf,num_below_thres_kmers,good_before,good_after):
+def fixing_sid(seq,to_be_fixed,k,threshold,qf,num_below_thres_kmers,good_before,good_after): #fix sub and indel
     try:
         fixed_base = "nN"
         original = '-'
@@ -242,7 +236,7 @@ def fixing_sid(seq,to_be_fixed,k,threshold,qf,num_below_thres_kmers,good_before,
                     fixed_base = '-'
                     fixed_ind = [good_after-2]
                                     
-        if num_below_thres_kmers == k-1: 
+        if num_below_thres_kmers == k-1: #deletion or same base insertion or substitution
            removed_base = fix_del(to_be_fixed,k,threshold,qf)
            if removed_base != None: #deletion of a base
                original = "d-"
@@ -257,17 +251,18 @@ def fixing_sid(seq,to_be_fixed,k,threshold,qf,num_below_thres_kmers,good_before,
                fixed_base = "-"
                fixed_ind = [good_before] #insertion after this index
            else:
-               b,i = fix_k_minus_1_case_sub(to_be_fixed,k,threshold,qf)
+               b,i = fix_k_minus_1_case_sub(to_be_fixed,k,threshold,qf) 
+               #try to fix by substitution of one base of one side of the bad stretch
                if b != None:
                   original = "s"+seq[good_after-1+i] #i=0 if the middle left base is changed, 1 if middle right
                   temp  = seq[:good_after-1+i] + b + seq[good_after+i:]                                                           
                   seq = temp
                   fixed_base = b
                   fixed_ind = [good_after-1+i]
-                  #try to fix by substitution of one base of one side of the bad stretch
-        if num_below_thres_kmers < k-1 and len(to_be_fixed)>=k:#skip the good_before = -1 case.
-            left,right,l_or_r =  fixhetero(to_be_fixed,k,threshold,qf)
-            if l_or_r !=  None: #diploidy
+                  
+        if num_below_thres_kmers < k-1 and len(to_be_fixed)>=k:#skip the good_before = -1 (ie first kmer is bad) case.
+            left,right,l_or_r =  fixdiploid(to_be_fixed,k,threshold,qf) #diploidy
+            if l_or_r !=  None: 
                 if l_or_r == "b": #b stands for both bases are changed
                     original = ["s"+seq[good_after-1],"s"+seq[good_before+1]]
                     fixed_base = [str(left),str(right)]
@@ -283,7 +278,7 @@ def fixing_sid(seq,to_be_fixed,k,threshold,qf,num_below_thres_kmers,good_before,
                 temp = seq[:good_after-1]+left+seq[good_after:good_before+1] + right + seq[good_before+2:]
                 seq =  temp
             else: #check same base deletion and same base insertion
-                removed_base = fix_sb_del(to_be_fixed,k,threshold,qf,num_below_thres_kmers)
+                removed_base = fix_same_base_del(to_be_fixed,k,threshold,qf,num_below_thres_kmers)
                 if removed_base != None: #deletion of a base
                     original = "d-"
                     fixed_ind = [good_after]
@@ -298,7 +293,7 @@ def fixing_sid(seq,to_be_fixed,k,threshold,qf,num_below_thres_kmers,good_before,
                         seq = temp
                         fixed_base = "-"
                         fixed_ind = [good_before] #insertion after this index
-        if num_below_thres_kmers > k:
+        if num_below_thres_kmers > k: #two or more nearby errors. Fix substitutions only.
             x,y = fix_nearby_subs(to_be_fixed,k,threshold,qf,num_below_thres_kmers)
             if x != None and y!=None:
                 original = ["s"+seq[good_after-1-num_below_thres_kmers+k],"s"+seq[good_after-1]] 
@@ -327,7 +322,7 @@ def fixing_sid(seq,to_be_fixed,k,threshold,qf,num_below_thres_kmers,good_before,
         print(sys.exc_info()) #to help debug                                  \                                                                   
         sys.exit(1)         
                 
-def fixhetero(seq_to_be_fixed,k,threshold,qf): #<k-1
+def fixdiploid(seq_to_be_fixed,k,threshold,qf):
     try:
         left_bad = seq_to_be_fixed[len(seq_to_be_fixed)-k]
         right_bad = seq_to_be_fixed[k-1]
@@ -386,6 +381,7 @@ def fix_k_case_sub(seq_to_be_fixed,k,threshold,qf): #when number of conseuctive 
 
 
 def fix_k_minus_1_case_sub(seq_to_be_fixed,k,threshold,qf): #when number of conseuctive bad kmers is k-1
+    #try to fix by substitution of one base of one side of the bad stretch
     for r in range(2):
       bad_base = seq_to_be_fixed[k-2+r]
       for b in 'ACTG':
@@ -403,7 +399,7 @@ def fix_k_minus_1_case_sub(seq_to_be_fixed,k,threshold,qf): #when number of cons
                 return b,r
     return None,None
     
-def fix_nearby_subs(seq_to_be_fixed,k,threshold,qf,num_below_thres_kmers):
+def fix_nearby_subs(seq_to_be_fixed,k,threshold,qf,num_below_thres_kmers): #a substituion nearby another error
     for x in 'ACTG':
         if x == seq_to_be_fixed[k-1]:
             continue
@@ -458,7 +454,7 @@ def fix_del(seq_to_be_fixed,k,threshold,qf):
                         
     return None
 
-def fix_sb_del(seq_to_be_fixed,k,threshold,qf,num_below_thres_kmers):
+def fix_same_base_del(seq_to_be_fixed,k,threshold,qf,num_below_thres_kmers):
     sb = seq_to_be_fixed[k-2] #sb stands for same base
     rr = k-1-num_below_thres_kmers #rr stands for remaining repeat (base)
     fixed = False
