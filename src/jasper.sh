@@ -6,6 +6,10 @@ NUM_THREADS=1
 CMD=jasper.py
 BATCH_SIZE=0
 PASSES=2
+KMER=25
+JF_SIZE=0
+QUERY="random.fa"
+QUERY_FN="random.fa"
 if tty -s < /dev/fd/1 2> /dev/null; then
     GC='\e[0;32m'
     RC='\e[0;31m'
@@ -142,7 +146,7 @@ if [ ! -e jasper.correct.success ];then
 log "Polishing"
 cat $JF_DB > /dev/null && \
 echo "#!/bin/bash" >run.sh && \
-echo "$CMD --db $JF_DB --query \$1 --ksize 25 -p $PASSES --fix --fout \$1.fix.csv -ff \$1.fixed.fa.tmp -thre `head -n 1 threshold.txt| awk '{print $1}'` 1>jasper.out 2>jasper.err && mv _iter1_\$1.fixed.fa.tmp _iter1_\$1.fixed.fa" >>run.sh && \
+echo "$CMD --db $JF_DB --query \$1 --ksize $KMER -p $PASSES --fix --fout \$1.fix.csv -ff \$1.fixed.fa.tmp -thre `head -n 1 threshold.txt| awk '{print $1}'` 1>jasper.out 2>jasper.err && mv _iter*_\$1.fixed.fa.tmp _iter*_\$1.fixed.fa" >>run.sh && \
 chmod 0755 run.sh && \
 ls $QUERY_FN.batch.*.fa | xargs -P $NUM_THREADS -I{} ./run.sh {} && \
 rm -f run.sh && \
@@ -152,7 +156,7 @@ fi
 if [ ! -e jasper.join.success ];then
 log "Joining"
 LAST_IT=$(($PASSES-1))
-cat _iter${LAST_IT}_$QUERY_FN.batch.*.fa.fixed.fa.tmp | perl -ane 'BEGIN{$seq="";$bs=int('$BATCH_SIZE');$bs=1 if($bs<=0);}{if($F[0] =~ /^>/){if(not($seq eq "")){$h{$ctg}=$seq;$seq=""}$ctg=$F[0]}else{$seq.=$F[0]}}END{$h{$ctg}=$seq;foreach $c(keys %h){if($c =~ /\:0$/){@f=split(/:/,$c);$ctg=join(":",@f[0..($#f-1)]);print "$ctg\n";$b=0;while(defined($h{$ctg.":$b"})){print $h{$ctg.":$b"};$b+=$bs;}print "\n";}}}' > $QUERY_FN.fixed.fasta.tmp && mv $QUERY_FN.fixed.fasta.tmp  $QUERY_FN.fixed.fasta && \
+cat _iter${LAST_IT}_$QUERY_FN.batch.*.fa.fixed.fa | perl -ane 'BEGIN{$seq="";$bs=int('$BATCH_SIZE');$bs=1 if($bs<=0);}{if($F[0] =~ /^>/){if(not($seq eq "")){$h{$ctg}=$seq;$seq=""}$ctg=$F[0]}else{$seq.=$F[0]}}END{$h{$ctg}=$seq;foreach $c(keys %h){if($c =~ /\:0$/){@f=split(/:/,$c);$ctg=join(":",@f[0..($#f-1)]);print "$ctg\n";$b=0;while(defined($h{$ctg.":$b"})){print $h{$ctg.":$b"};$b+=$bs;}print "\n";}}}' > $QUERY_FN.fixed.fasta.tmp && mv $QUERY_FN.fixed.fasta.tmp  $QUERY_FN.fixed.fasta && \
 rm -f _iter*_$QUERY_FN.batch.*.fa.fixed.fa $QUERY_FN.batch.*.fa && \
 log "Polished sequence is in $QUERY_FN.fixed.fasta" && \
 touch jasper.join.success
