@@ -111,6 +111,10 @@ if [ ! -s $MYPATH/jasper.py ];then
 error_exit "jasper.py not found on the PATH. Please keep jasper.py in the same directory as the executable."
 fi
 
+if [ ! -s $QUERY ];then
+error_exit "The query file $QUERY is not found."
+fi
+
 if [ $BATCH_SIZE -lt 1 ];then
   BATCH_SIZE=`grep -v '^>' $QUERY | tr -d '\n' |wc |awk '{print int($3/'$NUM_THREADS'*.9)}'`
   log "Using BATCH SIZE $BATCH_SIZE"
