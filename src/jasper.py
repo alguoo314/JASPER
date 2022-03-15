@@ -260,7 +260,7 @@ def fixing_sid(seq,to_be_fixed,k,threshold,qf,num_below_thres_kmers,good_before,
                   fixed_base = b
                   fixed_ind = [good_after-1+i]
                   
-        if num_below_thres_kmers < k-1 and len(to_be_fixed)>=k:#skip the good_before = -1 (ie first kmer is bad) case.
+        if num_below_thres_kmers < k-1 and num_below_thres_kmers > 1 and len(to_be_fixed)>=k:#skip the good_before = -1 (ie first kmer is bad) case.
             left,right,l_or_r =  fixdiploid(to_be_fixed,k,threshold,qf) #diploidy
             if l_or_r !=  None: 
                 if l_or_r == "b": #b stands for both bases are changed
@@ -417,7 +417,7 @@ def fix_nearby_subs(seq_to_be_fixed,k,threshold,qf,num_below_thres_kmers): #a su
                 if fixed == True:
                     return x,y
                 else:
-                    if qf[jf.MerDNA(seq_to_be_fixed[:k-1]+x).get_canonical()]  >= threshold and qf[jf.MerDNA(seq_to_be_fixed[1:k-1]+x+seq_to_be_fixed[k]).get_canonical()] > threshold:
+                    if qf[jf.MerDNA(seq_to_be_fixed[:k-1]+x).get_canonical()]  >= threshold and qf[jf.MerDNA(seq_to_be_fixed[1:k-1]+x+seq_to_be_fixed[k]).get_canonical()] >= threshold:
                         return x,None
                     elif qf[jf.MerDNA(seq_to_be_fixed[len(seq_to_be_fixed)-k-1]+y+seq_to_be_fixed[len(seq_to_be_fixed)-k+1:len(seq_to_be_fixed)-1]).get_canonical()]  >= threshold and qf[jf.MerDNA(y+seq_to_be_fixed[len(seq_to_be_fixed)-k+1:]).get_canonical()] >= threshold:
                        return None,y
