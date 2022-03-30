@@ -10,6 +10,7 @@ KMER=25
 JF_SIZE=0
 QUERY="random.fa"
 QUERY_FN="random.fa"
+READS="random.fastq"
 if tty -s < /dev/fd/1 2> /dev/null; then
     GC='\e[0;32m'
     RC='\e[0;31m'
@@ -100,7 +101,7 @@ do
     shift
 done
 
-LAST_IT=$(($PASSES-1))
+
 
 #calculate the threshold
 if [ ! -s $PYTHONPATH/jellyfish.py ];then
@@ -112,16 +113,10 @@ error_exit "jasper.py not found on the PATH. Please keep jasper.py in the same d
 fi
 
 if [ ! -s $QUERY ];then
-error_exit "The query file $QUERY is not found."
+error_exit "The query file does not exist. Please supply a valid assembly file with -a"
 fi
 
-if [ $BATCH_SIZE -lt 1 ];then
-  BATCH_SIZE=`grep -v '^>' $QUERY | tr -d '\n' |wc |awk '{print int($3/'$NUM_THREADS'*.9)}'`
-  log "Using BATCH SIZE $BATCH_SIZE"
-fi
-
-
-#Create database if the reads file is given instead of a database file             
+#Create database if the reads file is given instead of a database file                                       
 if [ -z ${JF_DB+x} ];then
   if [ -n ${READS+x} ];then
         JF_DB="mer_counts.jf"
@@ -129,11 +124,29 @@ if [ -z ${JF_DB+x} ];then
           log "Using existing jellyfish database mer_counts.jf"
         else
           log "Creating jellyfish database mer_counts.jf"
-	  zcat -f $READS | jellyfish count -C -s $JF_SIZE -m 25 -o $JF_DB -t $NUM_THREADS /dev/stdin
+          zcat -f $READS | jellyfish count -C -s $JF_SIZE -m 25 -o $JF_DB -t $NUM_THREADS /dev/stdin
         fi
     else
-	error_exit "Either a jf database or files of reads must be provided in the argument."
+        error_exit "Either a jf database or files of reads must be provided in the argument."
     fi
+fi
+
+if ! [[ $BATCH_SIZE =~ ^[0-9]+$ ]];then
+    log "BATCH SIZE supplied is not a positive integer. Calculating BATCH SIZE from QUERY SIZE"
+    BATCH_SIZE=0
+fi
+
+if [ $BATCH_SIZE -lt 1 ];then
+  BATCH_SIZE=`grep -v '^>' $QUERY | tr -d '\n' |wc |awk '{print int($3/'$NUM_THREADS'*.9)}'`
+  log "Using BATCH SIZE $BATCH_SIZE"
+fi
+
+if ! [[ $(($PASSES-1)) =~ ^[0-9]+$ ]];then
+error_exit "The number of passes supplied by -p must be a positive integer"
+fi
+
+if ! [[ $(($KMER-1)) =~ ^[0-9]+$ ]];then
+error_exit "The k-mer size supplied by -k must be a positive integer"
 fi
 
 if [ ! -e jasper.threshold.success ];then
@@ -142,6 +155,8 @@ jellyfish histo -t $NUM_THREADS $JF_DB > jfhisto.csv && \
 jellyfish.py  jfhisto.csv > threshold.txt && \
 rm jfhisto.csv && touch jasper.threshold.success
 fi
+
+LAST_IT=$(($PASSES-1))
 
 #create batches
 if [ ! -e jasper.split.success ];then 
