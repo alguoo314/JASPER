@@ -18,8 +18,9 @@ def main(contigs,query_path,k,test,fix,fout,tout,fixedout,database,thre,num_iter
         threshold,db = jellyfish(contigs, database, k,thre)
         
         print("Threshold =  {}".format(threshold))
+        qf  = jf.QueryMerFile(db)
         for ite in range(num_iter):
-            query_path = iteration(ite,db,query_path,k,test,fix,fout,tout,fixedout,database,threshold)
+            query_path = iteration(ite,qf,query_path,k,test,fix,fout,tout,fixedout,database,threshold)
     except:
          exception_type, exception_object, exception_traceback = sys.exc_info()
          line_number = exception_traceback.tb_lineno
@@ -28,9 +29,8 @@ def main(contigs,query_path,k,test,fix,fout,tout,fixedout,database,thre,num_iter
          sys.exit(1)         
             
 
-def iteration(ite,db,query_path,k,test,fix,fout,tout,fixedout,database,threshold):   
+def iteration(ite,qf,query_path,k,test,fix,fout,tout,fixedout,database,threshold):   
     try:    
-        qf  = jf.QueryMerFile(db)
         seq_dict = parse_fasta(query_path)
         wrong_kmers_dict = {}
         wrong_kmers_list = []
