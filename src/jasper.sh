@@ -36,15 +36,15 @@ function error_exit {
 }
 
 function usage {
-    echo "Usage: bash run_with_xargs.sh [options]"
+    echo "Usage: jasper.sh [options]"
     echo "Options:"
     echo "Options (default value in (), *required):"
     echo "-b, --batch=uint64               Desired batch size for the query (default value based on number of threads and assembly size)"
     echo  "-t, --threads=uint32             Number of threads (1)"
     echo "-a --assembly                    *Path to the assembly file"
     echo "-j --jf                          Path to the jellyfish database file. Required if --reads is not provided"
-    echo "-r --reads                       Path to the file(s) containing the reads to construct a jellyfish database. If two or more files are provided, please enclose the list with  a pair of quotation marks. Required if --jf is not provided"
-    echo "-k, --kmer=uint64                *k-mer size"
+    echo "-r --reads                       Path to the file(s) containing the reads to construct a jellyfish database. If two or more files are provided, please enclose the list with single-quotes, e.g. -r '/path_to/file1.fa /path_to/file2.fa'. Required if --jf is not provided"
+    echo "-k, --kmer=uint64                k-mer size (25)"
     echo "-p, --num_passes=utint16         The number of iterations of running jasper for fixing (2). A number smaller than 6 is usually more than sufficient" 
     echo "-h, --help                       This message"
     echo "-v, --verbose                    Output information (False)"
@@ -105,15 +105,15 @@ done
 
 #calculate the threshold
 if [ ! -s $PYTHONPATH/jellyfish.py ];then
-error_exit "jellyfish.py not found on the python library path $PYTHONPATH, or path is not set; please refer to https://github.com/gmarcais/Jellyfish for instructions on setting the variable."
+error_exit "jellyfish.py not found on the python library path $PYTHONPATH, or variable \$PYTHONPATH is not set; please refer to https://github.com/gmarcais/Jellyfish for instructions on setting the variable."
 fi
 
 if [ ! -s $MYPATH/jasper.py ];then
-error_exit "jasper.py not found on the PATH. Please keep jasper.py in the same directory as the executable."
+error_exit "jasper.py not found in $MYPATH. jasper.py must be in the directory as jasper.sh.  Please make reinstall JASPER."
 fi
 
 if [ ! -s $QUERY ];then
-error_exit "The query file does not exist. Please supply a valid assembly file with -a"
+error_exit "The query file does not exist. Please supply a valid fasta file to be polished with -a option."
 fi
 
 #Create database if the reads file is given instead of a database file                                       
@@ -133,7 +133,7 @@ if [ -z ${JF_DB+x} ];then
           zcat -f $READS | jellyfish count -C -s $JF_SIZE -m 25 -o $JF_DB -t $NUM_THREADS /dev/stdin
         fi
     else
-        error_exit "Either a jf database or files of reads must be provided in the argument."
+        error_exit "Either a jf database or files of polishing reads must be provided in the argument."
     fi
 fi
 
@@ -156,10 +156,12 @@ error_exit "The k-mer size supplied by -k must be a positive integer"
 fi
 
 if [ ! -e jasper.threshold.success ];then
-log "Determining the lower threshold for bad kmers"
+log "Determining lower threshold for bad kmers"
 jellyfish histo -t $NUM_THREADS $JF_DB > jfhisto.csv && \
 jellyfish.py  jfhisto.csv > threshold.txt && \
-rm jfhisto.csv && touch jasper.threshold.success
+rm jfhisto.csv && \
+rm -f jasper.correct.success && \
+touch jasper.threshold.success || error_exit "Computing threshold failed"
 fi
 
 LAST_IT=$(($PASSES-1))
@@ -170,30 +172,29 @@ log "Splitting query into batches for parallel execution"
 rm -f $QUERY_FN.batch.*.fa && \
 perl -ane 'BEGIN{$seq="";$bs=int('$BATCH_SIZE');}{if($F[0] =~ /^>/){if(not($seq eq "")){for($ci=0;$ci<length($seq);$ci+=$bs){print "$ctg:$ci\n",substr($seq,$ci,$bs),"\n";}}$ctg=$F[0];$seq=""}else{$seq.=$F[0]}}END{if(not($seq eq "")){for($ci=0;$ci<length($seq);$ci+=$bs){print "$ctg:$ci\n",substr($seq,$ci,$bs),"\n";}}}' $QUERY | \
 perl -ane 'BEGIN{$batch_index=0;$output=0;open(FILE,">'$QUERY_FN'.batch.".$batch_index.".fa");}{if($F[0]=~/^>/){if($output>int('$BATCH_SIZE')){close(FILE);$batch_index++;open(FILE,">'$QUERY_FN'.batch.".$batch_index.".fa");$output=0;}}else{$output+=length($F[0]);}print FILE join(" ",@F),"\n";}' && \
-touch jasper.split.success
+rm -f jasper.correct.success && \
+touch jasper.split.success || error_exit "Splitting files failed, do you have enough dick space?"
 fi
 
 if [ ! -e jasper.correct.success ];then
 log "Polishing"
 cat $JF_DB > /dev/null && \
-echo "#!/bin/bash" >run.sh && \
-echo "$CMD --db $JF_DB --query \$1 --ksize $KMER -p $PASSES --fix --fout \$1.fix.csv -ff \$1.fixed.fa.tmp -thre `head -n 1 threshold.txt| awk '{print $1}'` 1>jasper.out 2>jasper.err && mv _iter${LAST_IT}_\$1.fixed.fa.tmp _iter${LAST_IT}_\$1.fixed.fa" >>run.sh && \
-chmod 0755 run.sh && \
-ls $QUERY_FN.batch.*.fa | xargs -P $NUM_THREADS -I{} ./run.sh {} && \
-rm -f run.sh && \
-touch jasper.correct.success
+echo "#!/bin/bash" >run_jasper.sh && \
+echo "$CMD --db $JF_DB --query \$1 --ksize $KMER -p $PASSES --fix --fout \$1.fix.csv -ff \$1.fixed.fa.tmp -thre `head -n 1 threshold.txt| awk '{print $1}'` 1>jasper.out 2>jasper.err && mv _iter${LAST_IT}_\$1.fixed.fa.tmp _iter${LAST_IT}_\$1.fixed.fa" >> run_jasper.sh && \
+chmod 0755 run_jasper.sh && \
+ls $QUERY_FN.batch.*.fa | xargs -P $NUM_THREADS -I{} ./run_jasper.sh {} && \
+rm -f run_jasper.sh && \
+rm -f jasper.join.success && \
+touch jasper.correct.success || error_exit "Polishing failed"
 fi 
 
 if [ ! -e jasper.join.success ];then
 log "Joining"
 cat _iter${LAST_IT}_$QUERY_FN.batch.*.fa.fixed.fa | perl -ane 'BEGIN{$seq="";$bs=int('$BATCH_SIZE');$bs=1 if($bs<=0);}{if($F[0] =~ /^>/){if(not($seq eq "")){$h{$ctg}=$seq;$seq=""}$ctg=$F[0]}else{$seq.=$F[0]}}END{$h{$ctg}=$seq;foreach $c(keys %h){if($c =~ /\:0$/){@f=split(/:/,$c);$ctg=join(":",@f[0..($#f-1)]);print "$ctg\n";$b=0;while(defined($h{$ctg.":$b"})){print $h{$ctg.":$b"};$b+=$bs;}print "\n";}}}' > $QUERY_FN.fixed.fasta.tmp && mv $QUERY_FN.fixed.fasta.tmp $QUERY_FN.fixed.fasta && \
-rm -f _iter*_$QUERY_FN.batch.*.fa.fixed.fa $QUERY_FN.batch.*.fa && \
-log "Polished sequence is in $QUERY_FN.fixed.fasta" && \
-touch jasper.join.success
+rm -f _iter*_$QUERY_FN.batch.*.fa.fixed.fa _iter*_$QUERY_FN.batch.*.fa.fixed.fa.tmp && \
+cat _iter*_$QUERY_FN.batch.*.fa.fix.csv > $QUERY_FN.fixes.csv.tmp && mv $QUERY_FN.fixes.csv.tmp $QUERY_FN.fixes.csv && \
+rm -f _iter*_$QUERY_FN.batch.*.fa.fix.csv && \
+touch jasper.join.success || error_exit "Joining failed"
 fi
 
-#cat $QUERY.fix.*.csv > $QUERY.fix.csv.tmp && mv $QUERY.fix.csv.tmp $QUERY.fix.csv && \
-#cat $QUERY.test.*.csv > $QUERY.test.csv.tmp && mv $QUERY.test.csv.tmp $QUERY.test.csv && \
-#rm -f  $QUERY.fix.*.csv $QUERY.test.*.csv $QUERY.fixed.*.fasta && \
-#grep ^Q  jasper.*.out > jasper.out 
-
+log "Polished sequence is in $QUERY_FN.fixed.fasta"
