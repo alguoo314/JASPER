@@ -39,7 +39,7 @@ function usage {
     echo "Usage: jasper.sh [options]"
     echo "Options:"
     echo "Options (default value in (), *required):"
-    echo "-b, --batch=uint64               Desired batch size for the query (default value based on number of threads and assembly size)"
+    echo "-b, --batch=uint64               Desired batch size for the query (default value based on number of threads and assembly size). For the efficiency of jellyfish database loading, the max number of batches is limited to 8."
     echo  "-t, --threads=uint32             Number of threads (1)"
     echo "-a --assembly                    *Path to the assembly file"
     echo "-j --jf                          Path to the jellyfish database file. Required if --reads is not provided"
@@ -143,7 +143,11 @@ if ! [[ $BATCH_SIZE =~ ^[0-9]+$ ]];then
 fi
 
 if [ $BATCH_SIZE -lt 1 ];then
-  BATCH_SIZE=`grep -v '^>' $QUERY | tr -d '\n' |wc |awk '{print int($3/'$NUM_THREADS'*.9)}'`
+  if [ $(echo "$NUM_THREADS > 8*.9" | bc) -ne 0 ];then
+      BATCH_SIZE=`grep -v '^>' $QUERY | tr -d '\n' |wc |awk '{print int($3/'$NUM_THREADS'*.9)}'`
+  else
+      BATCH_SIZE=`grep -v '^>' $QUERY | tr -d '\n' |wc |awk '{print int($3/8)}'`
+  fi
   log "Using BATCH SIZE $BATCH_SIZE"
 fi
 
