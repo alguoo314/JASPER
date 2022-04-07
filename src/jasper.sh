@@ -143,7 +143,7 @@ if ! [[ $BATCH_SIZE =~ ^[0-9]+$ ]];then
 fi
 
 if [ $BATCH_SIZE -lt 1 ];then
-  if [ $(echo "$NUM_THREADS > 8*.9" | bc) -ne 0 ];then
+  if [ $(echo "$NUM_THREADS < 8*.9" | bc) -ne 0 ];then
       BATCH_SIZE=`grep -v '^>' $QUERY | tr -d '\n' |wc |awk '{print int($3/'$NUM_THREADS'*.9)}'`
   else
       BATCH_SIZE=`grep -v '^>' $QUERY | tr -d '\n' |wc |awk '{print int($3/8)}'`
