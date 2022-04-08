@@ -48,7 +48,7 @@ def iteration(ite,qf,query_path,k,test,fix,fout,tout,fixedout,database,threshold
         for seqname,seq in seq_dict.items():
             seq = seq.upper()
             total_kmers += len(seq)-k+1
-            print(seqname+":")
+            #print(seqname+":")
             rare_occurance = 0
             good_before = -1 #index of the last guaranteed good base before the mismatch                                                                                     
             backtracked = False
