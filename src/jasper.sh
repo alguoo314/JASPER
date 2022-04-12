@@ -137,19 +137,22 @@ if [ -z ${JF_DB+x} ];then
     fi
 fi
 
+
+if [ $NUM_THREADS -lt 9 ];then
+    NEW_NUM_THREADS=$NUM_THREADS
+else
+    NEW_NUM_THREADS=8
+fi
 if ! [[ $BATCH_SIZE =~ ^[0-9]+$ ]];then
     log "BATCH SIZE supplied is not a positive integer. Calculating BATCH SIZE from QUERY SIZE"
     BATCH_SIZE=0
 fi
 
-if [ $BATCH_SIZE -lt 1 ];then
-  if [ $(echo "$NUM_THREADS < 8*.9" | bc) -ne 0 ];then
-      BATCH_SIZE=`grep -v '^>' $QUERY | tr -d '\n' |wc |awk '{print int($3/'$NUM_THREADS'*.9)}'`
-  else
-      BATCH_SIZE=`grep -v '^>' $QUERY | tr -d '\n' |wc |awk '{print int($3/8)}'`
-  fi
-  log "Using BATCH SIZE $BATCH_SIZE"
-fi
+BS=`grep -v '^>' $QUERY | tr -d '\n' |wc |awk '{print int($3/'$NEW_NUM_THREADS'*.9)}'`
+if [ $BS -gt $BATCH_SIZE ];then
+    BATCH_SIZE=$BS
+fi    
+log "Using BATCH SIZE $BATCH_SIZE"
 
 if ! [[ $(($PASSES-1)) =~ ^[0-9]+$ ]];then
 error_exit "The number of passes supplied by -p must be a positive integer"
@@ -184,9 +187,9 @@ if [ ! -e jasper.correct.success ];then
 log "Polishing"
 cat $JF_DB > /dev/null && \
 echo "#!/bin/bash" >run_jasper.sh && \
-echo "$CMD --db $JF_DB --query \$1 --ksize $KMER -p $PASSES --fix --fout \$1.fix.csv -ff \$1.fixed.fa.tmp --test --tout \$1.test.csv -thre `head -n 1 threshold.txt| awk '{print $1}'` 1>jasper.out 2>jasper.err && mv _iter${LAST_IT}_\$1.fixed.fa.tmp _iter${LAST_IT}_\$1.fixed.fa" >> run_jasper.sh && \
+echo "$CMD --db $JF_DB --query \$1 --ksize $KMER -p $PASSES --fix --fout \$1.fix.csv -ff \$1.fixed.fa.tmp --test -thre `head -n 1 threshold.txt| awk '{print $1}'` 1>jasper.out 2>jasper.err && mv _iter${LAST_IT}_\$1.fixed.fa.tmp _iter${LAST_IT}_\$1.fixed.fa" >> run_jasper.sh && \
 chmod 0755 run_jasper.sh && \
-ls $QUERY_FN.batch.*.fa | xargs -P $NUM_THREADS -I{} ./run_jasper.sh {} && \
+ls $QUERY_FN.batch.*.fa | xargs -P $NEW_NUM_THREADS -I{} ./run_jasper.sh {} && \
 rm -f run_jasper.sh && \
 rm -f jasper.join.success && \
 touch jasper.correct.success || error_exit "Polishing failed"
@@ -199,9 +202,6 @@ rm -f _iter*_$QUERY_FN.batch.*.fa.fixed.fa _iter*_$QUERY_FN.batch.*.fa.fixed.fa.
 #cat _iter*_$QUERY_FN.batch.*.fa.fix.csv > $QUERY_FN.fixes.csv.tmp && mv $QUERY_FN.fixes.csv.tmp $QUERY_FN.fixes.csv && \
 awk 'NR==1 || FNR>1' _iter*_$QUERY_FN.batch.*.fa.fix.csv  > $QUERY_FN.fixes.csv.tmp && mv $QUERY_FN.fixes.csv.tmp $QUERY_FN.fixes.csv && \
 rm -f _iter*_$QUERY_FN.batch.*.fa.fix.csv && \
-#cat _iter*_$QUERY_FN.batch.*.fa.test.csv > $QUERY_FN.tests.csv.tmp && mv $QUERY_FN.tests.csv.tmp $QUERY_FN.tests.csv && \
-awk 'NR==1 || FNR>1' _iter*_$QUERY_FN.batch.*.fa.test.csv > $QUERY_FN.tests.csv.tmp && mv $QUERY_FN.tests.csv.tmp $QUERY_FN.tests.csv && \
-rm -f _iter*_$QUERY_FN.batch.*.fa.test.csv && \
 rm -f $QUERY_FN.batch.*.fa && \
 touch jasper.join.success || error_exit "Joining failed"
 fi

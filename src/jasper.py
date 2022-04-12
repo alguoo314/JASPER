@@ -8,7 +8,7 @@ import csv
 import dna_jellyfish as jf
 import textwrap
 
-def main(contigs,query_path,k,test,fix,fout,tout,fixedout,database,thre,num_iter):
+def main(contigs,query_path,k,test,fix,fout,fixedout,database,thre,num_iter):
     try:
         db = database
         if ((contigs == None and database == None) or (contigs != None and database != None)): 
@@ -19,8 +19,8 @@ def main(contigs,query_path,k,test,fix,fout,tout,fixedout,database,thre,num_iter
         
         print("Threshold =  {}".format(threshold))
         qf  = jf.QueryMerFile(db)
-        for ite in range(num_iter):
-            query_path = iteration(ite,qf,query_path,k,test,fix,fout,tout,fixedout,database,threshold)
+        for ite in range(num_iter+1): #num_iter rounds of fixing plus one more round to find the final q value
+            query_path = iteration(num_iter,ite,qf,query_path,k,test,fix,fout,fixedout,database,threshold)
     except:
          exception_type, exception_object, exception_traceback = sys.exc_info()
          line_number = exception_traceback.tb_lineno
@@ -29,24 +29,23 @@ def main(contigs,query_path,k,test,fix,fout,tout,fixedout,database,thre,num_iter
          sys.exit(1)         
             
 
-def iteration(ite,qf,query_path,k,test,fix,fout,tout,fixedout,database,threshold):   
-    try:    
+def iteration(num_iter,ite,qf,query_path,k,test,fix,fout,fixedout,database,threshold):   
+    try:
+        if ite == num_iter:
+            fix=False
         seq_dict = parse_fasta(query_path)
-        wrong_kmers_dict = {}
         wrong_kmers_list = []
         seqs = []
         fixed_bases_list = []
         total_wrong_kmers = 0
         total_kmers = 0
-        tout = os.path.split(tout)
-        tout = tout[0]+"_iter"+str(ite)+"_"+tout[1]
         fout = os.path.split(fout)
         fout = fout[0]+"_iter"+str(ite)+"_"+fout[1]
         fixedout = os.path.split(fixedout)
         fixedout = fixedout[0]+"_iter"+str(ite)+"_"+fixedout[1]
-
+        seq_names=[]
         for seqname,seq in seq_dict.items():
-            seq = seq.upper()
+            seq_names.append(seqname)
             total_kmers += len(seq)-k+1
             #print(seqname+":")
             rare_occurance = 0
@@ -127,7 +126,6 @@ def iteration(ite,qf,query_path,k,test,fix,fout,tout,fixedout,database,threshold
             
                     
             seqs.append(seq)
-            wrong_kmers_dict[seqname] = wrong_kmers_list
             total_wrong_kmers += len(wrong_kmers_list)
 
 
@@ -139,13 +137,8 @@ def iteration(ite,qf,query_path,k,test,fix,fout,tout,fixedout,database,threshold
             else:
                 Q = "Inf"
             print("Q value = {}, # of bad kmers = {}, error rate = {}, # of total bases in the fasta file = {}".format(Q,total_wrong_kmers,e,total_kmers))
-            kmers_fields = ['Contig','Kmer Coord']
-            with open(tout,'w') as csvt:
-                csvwriter = csv.writer(csvt,delimiter=' ')
-                csvwriter.writerow(kmers_fields)
-                for seqname in wrong_kmers_dict.keys():
-                    for ind in wrong_kmers_dict[seqname]:
-                        csvwriter.writerow([seqname,ind+1]) #output index lefts with 1 instead of 0
+            
+            
         
         if fix == True:
             base_fields = ['Contig', 'Base_coord', 'Original',"Mutated"]
@@ -156,7 +149,7 @@ def iteration(ite,qf,query_path,k,test,fix,fout,tout,fixedout,database,threshold
 
             i = 0
             with open(fixedout,'w') as of:
-                for seqname in wrong_kmers_dict.keys():
+                for seqname in seq_names:
                     of.write(">{}\n".format(seqname))
                     new_seq = split_output(seqs[i],60)
                     for l in new_seq:
@@ -515,12 +508,11 @@ if __name__ == '__main__':
     parser.add_argument("-q","--query", help = "The path to the .fasta query file")
     parser.add_argument("-thre","--threshold", type=int, default = None, help = "The threshold for a bad kmer.")
     parser.add_argument("-k","--ksize", type=int,help = "The kmer size")
-    parser.add_argument("--test", action='store_true',help = "Ouput the indexes of bad kmers, total num of bad kmers, and an estimation for Q value")
+    parser.add_argument("--test", action='store_true',help = "Ouput the total num of bad kmers, and an estimation for Q value")
     parser.add_argument("--fix", action='store_true', help="Output the index of fixed bases and output the new sequence")
     parser.add_argument("--fout",default = "fout.csv",help = "The path to output the index of the fixed bases." )
     parser.add_argument("-ff","--fixedfasta",default = "fixed_seq.fasta",help = "The path to output the fixed assembly sequences")
-    parser.add_argument("--tout", default = "tout.csv", help = "The output file containing the locations of bad kmers")
     parser.add_argument("-p","--num_passes", type=int, default = 2, help = "The number of iterations of fixing.")
     args = parser.parse_args()
-    main(args.reads,args.query,args.ksize,args.test,args.fix,args.fout,args.tout,args.fixedfasta,args.db,args.threshold,args.num_passes)
+    main(args.reads,args.query,args.ksize,args.test,args.fix,args.fout,args.fixedfasta,args.db,args.threshold,args.num_passes)
 
