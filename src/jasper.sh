@@ -206,4 +206,30 @@ rm -f $QUERY_FN.batch.*.fa && \
 touch jasper.join.success || error_exit "Joining failed"
 fi
 
+#outputting Q value
+total_error_kmers_before=$(awk '{total+=$1}END{print total}' 0qValCalcHelper.csv)
+total_kmers_before=$(awk '{total+=$2}END{print total}' 0qValCalcHelper.csv)
+total_error_kmers_after=$(awk '{total+=$1}END{print total}' ${PASSES}qValCalcHelper.csv)
+total_kmers_after=$(awk '{total+=$2}END{print total}' ${PASSES}qValCalcHelper.csv)
+pgood_before=$(echo "scale=10; 1-$total_error_kmers_before/$total_kmers_before" | bc)
+error_rate_before=$(echo "scale=50; 1 - e(l($pgood_before)*(1/$KMER))" | bc -l)
+if (( $(echo "$error_rate_before > 0" | bc -l) )); then
+    Q_before=$(echo "scale=5; -10*l($error_rate_before) / l(10)" | bc -l)
+else
+    Q_before="Inf"
+
+fi
+log "Before Polishing: Q value = $Q_before"
+
+pgood_after=$(echo "scale=10; 1-$total_error_kmers_after/$total_kmers_after" | bc)
+error_rate_after=$(echo "scale=50; 1 - e(l($pgood_after)*(1/$KMER))" | bc -l)
+if (( $(echo "$error_rate_after > 0" | bc -l) )); then
+    Q_after=$(echo "scale=5; -10*l($error_rate_after) / l(10)" | bc -l)
+else
+    Q_after="Inf"
+fi
+
+log "After Polishing: Q value = $Q_after"
+rm -f *qValCalcHelper.csv
+
 log "Polished sequence is in $QUERY_FN.fixed.fasta"

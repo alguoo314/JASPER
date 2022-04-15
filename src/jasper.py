@@ -17,7 +17,7 @@ def main(contigs,query_path,k,test,fix,fout,fixedout,database,thre,num_iter):
         
         threshold,db = jellyfish(contigs, database, k,thre)
         
-        print("Threshold =  {}".format(threshold))
+        #print("Threshold =  {}".format(threshold))
         qf  = jf.QueryMerFile(db)
         for ite in range(num_iter+1): #num_iter rounds of fixing plus one more round to find the final q value
             query_path = iteration(num_iter,ite,qf,query_path,k,test,fix,fout,fixedout,database,threshold)
@@ -130,14 +130,11 @@ def iteration(num_iter,ite,qf,query_path,k,test,fix,fout,fixedout,database,thres
 
 
         if test == True:
-            p_good = 1-total_wrong_kmers/total_kmers
-            e = 1-p_good**(1/k)
-            if e != 0:
-                Q = round(-10*math.log(e,10),2)
-            else:
-                Q = "Inf"
-            print("Q value = {}, # of bad kmers = {}, error rate = {}, # of total bases in the fasta file = {}".format(Q,total_wrong_kmers,e,total_kmers))
-            
+            if ite == 0 or ite==num_iter:
+                file_name = str(ite)+"qValCalcHelper.csv"
+                with open(file_name,'a') as f:
+                    f.write("{} {}\n".format(total_wrong_kmers,total_kmers))
+                        
             
         
         if fix == True:
