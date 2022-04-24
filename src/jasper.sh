@@ -138,10 +138,10 @@ if [ -z ${JF_DB+x} ];then
 fi
 
 
-if [ $NUM_THREADS -lt 9 ];then
+if [ $NUM_THREADS -lt 17 ];then
     NEW_NUM_THREADS=$NUM_THREADS
 else
-    NEW_NUM_THREADS=8
+    NEW_NUM_THREADS=16
 fi
 if ! [[ $BATCH_SIZE =~ ^[0-9]+$ ]];then
     log "BATCH SIZE supplied is not a positive integer. Calculating BATCH SIZE from QUERY SIZE"
