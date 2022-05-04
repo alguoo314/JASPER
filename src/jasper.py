@@ -271,7 +271,7 @@ def fixing_sid(seq,to_be_fixed,k,threshold,qf,num_below_thres_kmers,good_before,
                 removed_base = fix_same_base_del(to_be_fixed,k,threshold,qf,num_below_thres_kmers)
                 if removed_base != None: #deletion of a base
                     original = "d-"
-                    fixed_ind = [good_after]
+                    fixed_ind = [good_after*len(removed_base)]
                     temp = seq[:good_after]+removed_base+seq[good_after:]
                     seq = temp
                     fixed_base = removed_base 
@@ -279,7 +279,7 @@ def fixing_sid(seq,to_be_fixed,k,threshold,qf,num_below_thres_kmers,good_before,
                     inserted_base = fix_same_base_insertion(to_be_fixed,k,threshold,qf,num_below_thres_kmers)
                     if inserted_base != None:
                         original = "i"+inserted_base
-                        temp = seq[:good_before] + seq[good_before+1:]     
+                        temp = seq[:good_before] + seq[good_before+len(inserted_base):]     
                         seq = temp
                         fixed_base = "-"
                         fixed_ind = [good_before] #insertion after this index
@@ -416,7 +416,6 @@ def fix_nearby_subs(seq_to_be_fixed,k,threshold,qf,num_below_thres_kmers): #a su
                 
 
 def fix_insert(seq_to_be_fixed,k,threshold,qf):
-    
     ind_to_be_removed = k-1
     base_to_be_removed = seq_to_be_fixed[ind_to_be_removed]
     seq_to_be_fixed = seq_to_be_fixed[:ind_to_be_removed] + seq_to_be_fixed[ind_to_be_removed+1:]
@@ -446,35 +445,53 @@ def fix_del(seq_to_be_fixed,k,threshold,qf):
 
 def fix_same_base_del(seq_to_be_fixed,k,threshold,qf,num_below_thres_kmers):
     sb = seq_to_be_fixed[k-2] #sb stands for same base
-    rr = k-1-num_below_thres_kmers #rr stands for remaining repeat (base)
     fixed = False
-    if seq_to_be_fixed[k-1-rr:k-1] == sb * rr:
-        trial = seq_to_be_fixed[:k-1]+sb+seq_to_be_fixed[k-1:]
+    trial=seq_to_be_fixed
+    new_bad = 0
+    inserted = 0
+    old_bad = len(seq_to_be_fixed)-k+1
+    current_bad = old_bad
+    while inserted <= 5:
+        new_bad=0
+        trial = trial[:k-1]+sb+trial[k-1:]
         fixed = True
-        for i in  range(len(trial)-k+1):
+        inserted+=1
+        print("fsbd")
+        print(inserted)
+        for i in range(len(trial)-k+1):
             if qf[jf.MerDNA(trial[i:k+i]).get_canonical()] < threshold:
                 fixed  = False
-                break
-    if fixed == True:
-        return sb
-    else:
-        return None
+                new_bad +=1
+        if (fixed == True) or (new_bad < current_bad-3):
+            return sb*inserted
+        else: #added one base may have helped but need more
+            current_bad = new_bad
+            continue
+    return None
 
 
 def fix_same_base_insertion(seq_to_be_fixed,k,threshold,qf,num_below_thres_kmers):
     ind_to_be_removed = k-1
     sb = seq_to_be_fixed[k-1] #sb stands for same base
-    rr = k-num_below_thres_kmers #rr stands for remaining repeat (base) if without the insertion
     fixed = False
-    if seq_to_be_fixed[k-1-rr:k-1] == sb * rr:
+    reduced = 0
+    remaining_bad = len(seq_to_be_fixed)-k+1
+    while seq_to_be_fixed[k-1] == sb and reduced <= 5:
+        reduced +=1
         seq_to_be_fixed = seq_to_be_fixed[:ind_to_be_removed] + seq_to_be_fixed[ind_to_be_removed+1:]
         fixed=True
+        print("fsbi")
+        print(reduced)
+        new_remaining_bad = 0
         for i in  range(len(seq_to_be_fixed)-k+1):
             if qf[jf.MerDNA(seq_to_be_fixed[i:k+i]).get_canonical()] < threshold:
-                fixed  = False
-                break
-    if fixed == True:
-        return sb
+                fixed=False
+                new_remaining_bad +=1
+        if fixed == True or new_remaining_bad < remaining_bad-3: #no bad kmers
+            return sb*reduced
+        else:
+            remaining_bad = new_remaining_bad
+
     return None
 
 

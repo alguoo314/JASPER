@@ -12,5 +12,8 @@ with open(csv_file,'r') as histo:
             count = int(row[-1])
             threshold = int(int(row[0])/2)
         else: #found local min
-            sys.stdout.write(str(threshold))
-            sys.exit(0)
+            if threshold<2:
+                sys.exit(0)
+            else:
+                sys.stdout.write(str(threshold))
+                sys.exit(0)

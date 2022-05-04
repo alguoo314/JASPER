@@ -171,6 +171,10 @@ rm -f jasper.correct.success && \
 touch jasper.threshold.success || error_exit "Computing threshold failed"
 fi
 
+if ! [ -s threshold.txt ]; then
+error_exit "Local min of kmer counts is smaller than 4. The input read data is not suitable for polishing."
+fi
+
 LAST_IT=$(($PASSES-1))
 
 #create batches
