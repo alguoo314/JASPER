@@ -111,6 +111,8 @@ def iteration(num_iter,ite,qf,query_path,k,test,fix,fout,fixedout,database,thres
                     wrong_kmers_list.extend([*range(max(0,good_before-k+2),good_after)])
                     
                     if fix == True:
+                        if good_before < 0:
+                            continue
                         seq,fixed_base,original,fixed_ind = fixing_sid(seq,to_be_fixed,k,threshold,qf,len([*range(max(0,good_before-k+2),good_after)]),good_before,good_after) #fix simple sub/insert/del cases
                         if fixed_base != "nN":
                             if len(fixed_ind) == 1:
@@ -267,22 +269,23 @@ def fixing_sid(seq,to_be_fixed,k,threshold,qf,num_below_thres_kmers,good_before,
                     fixed_ind = [good_before+1]
                 temp = seq[:good_after-1]+left+seq[good_after:good_before+1] + right + seq[good_before+2:]
                 seq =  temp
-            else: #check same base deletion and same base insertion
-                removed_base = fix_same_base_del(to_be_fixed,k,threshold,qf,num_below_thres_kmers)
-                if removed_base != None: #deletion of a base
-                    original = "d-"
-                    fixed_ind = [good_after]
-                    temp = seq[:good_before]+removed_base+seq[good_before:]
+            else: 
+                inserted_base = fix_same_base_insertion(to_be_fixed,k,threshold,qf,num_below_thres_kmers)
+                if inserted_base != None:
+                    original = "i"+inserted_base
+                    temp = seq[:good_before] + seq[good_before+len(inserted_base):]     
                     seq = temp
-                    fixed_base = removed_base 
+                    fixed_base = "-"
+                    fixed_ind = [good_before] #insertion after this index
                 else:
-                    inserted_base = fix_same_base_insertion(to_be_fixed,k,threshold,qf,num_below_thres_kmers)
-                    if inserted_base != None:
-                        original = "i"+inserted_base
-                        temp = seq[:good_before] + seq[good_before+len(inserted_base):]     
+                    removed_base = fix_same_base_del(to_be_fixed,k,threshold,qf,num_below_thres_kmers)
+                    if removed_base != None: #deletion of a base                                                                                                                                                                            
+                        original = "d-"
+                        fixed_ind = [good_before]
+                        temp = seq[:good_before]+removed_base+seq[good_before:]
                         seq = temp
-                        fixed_base = "-"
-                        fixed_ind = [good_before] #insertion after this index
+                        fixed_base = removed_base
+
         if num_below_thres_kmers > k: #two or more nearby errors. Fix substitutions only.
             x,y = fix_nearby_subs(to_be_fixed,k,threshold,qf,num_below_thres_kmers)
             if x != None and y!=None:
@@ -436,12 +439,12 @@ def fix_del(seq_to_be_fixed,k,threshold,qf):
         fixed = True
         new_bad=0
         old_bad = len(seq_to_be_fixed)-k+1
+        
         for i in  range(len(trial)-k+1):
             if qf[jf.MerDNA(trial[i:k+i]).get_canonical()] < threshold:
                 fixed  = False
                 new_bad+=1
-                break
-        if fixed == True or new_bad < old_bad-3:
+        if fixed == True or old_bad-new_bad > 4:
             return alt
                         
     return None
@@ -459,13 +462,11 @@ def fix_same_base_del(seq_to_be_fixed,k,threshold,qf,num_below_thres_kmers):
         trial = trial[:k-1]+sb+trial[k-1:]
         fixed = True
         inserted+=1
-        print("fsbd")
-        print(inserted)
         for i in range(len(trial)-k+1):
             if qf[jf.MerDNA(trial[i:k+i]).get_canonical()] < threshold:
                 fixed  = False
                 new_bad +=1
-        if (fixed == True) or (new_bad < current_bad-3):
+        if (fixed == True) or (new_bad < current_bad-4):
             return sb*inserted
         else: #added one base may have helped but need more
             current_bad = new_bad
@@ -483,14 +484,12 @@ def fix_same_base_insertion(seq_to_be_fixed,k,threshold,qf,num_below_thres_kmers
         reduced +=1
         seq_to_be_fixed = seq_to_be_fixed[:ind_to_be_removed] + seq_to_be_fixed[ind_to_be_removed+1:]
         fixed=True
-        print("fsbi")
-        print(reduced)
         new_remaining_bad = 0
         for i in  range(len(seq_to_be_fixed)-k+1):
             if qf[jf.MerDNA(seq_to_be_fixed[i:k+i]).get_canonical()] < threshold:
                 fixed=False
                 new_remaining_bad +=1
-        if fixed == True or new_remaining_bad < remaining_bad-3:
+        if fixed == True or new_remaining_bad < remaining_bad-4:
             return sb*reduced
         else:
             remaining_bad = new_remaining_bad
