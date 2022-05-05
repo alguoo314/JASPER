@@ -468,6 +468,8 @@ def fix_same_base_del(seq_to_be_fixed,k,threshold,qf,num_below_thres_kmers):
                 new_bad +=1
         if (fixed == True) or (new_bad < current_bad-4):
             return sb*inserted
+        if (new_bad > current_bad):
+            return None
         else: #added one base may have helped but need more
             current_bad = new_bad
             continue
@@ -489,7 +491,7 @@ def fix_same_base_insertion(seq_to_be_fixed,k,threshold,qf,num_below_thres_kmers
             if qf[jf.MerDNA(seq_to_be_fixed[i:k+i]).get_canonical()] < threshold:
                 fixed=False
                 new_remaining_bad +=1
-        if fixed == True or new_remaining_bad < remaining_bad-4:
+        if fixed == True or (new_remaining_bad < remaining_bad-4 and new_remaining_bad<(len(seq_to_be_fixed)-k+1)/2):
             return sb*reduced
         else:
             remaining_bad = new_remaining_bad

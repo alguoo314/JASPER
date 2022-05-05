@@ -205,7 +205,7 @@ cat _iter${LAST_IT}_$QUERY_FN.batch.*.fa.fixed.fa | perl -ane 'BEGIN{$seq="";$bs
 rm -f _iter*_$QUERY_FN.batch.*.fa.fixed.fa _iter*_$QUERY_FN.batch.*.fa.fixed.fa.tmp && \
 #cat _iter*_$QUERY_FN.batch.*.fa.fix.csv > $QUERY_FN.fixes.csv.tmp && mv $QUERY_FN.fixes.csv.tmp $QUERY_FN.fixes.csv && \
 awk 'NR==1 || FNR>1' _iter*_$QUERY_FN.batch.*.fa.fix.csv  > $QUERY_FN.fixes.csv.tmp && sort -k1,1 -k2,2n $QUERY_FN.fixes.csv.tmp > $QUERY_FN.fixes.csv && \
-rm -f _iter*_$QUERY_FN.batch.*.fa.fix.csv && \
+#rm -f _iter*_$QUERY_FN.batch.*.fa.fix.csv && \
 rm -f $QUERY_FN.fixes.csv.tmp && \
 rm -f $QUERY_FN.batch.*.fa && \
 touch jasper.join.success || error_exit "Joining failed"
