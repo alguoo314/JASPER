@@ -123,8 +123,7 @@ def iteration(num_iter,ite,qf,query_path,k,test,fix,fout,fixedout,database,thres
                     
                 else: #good kmer                                                                                                                                                      
                     backtracked = False
-                    good_before = i+k-1 #the right base of a good kmer                                                                                       
-                    i += k
+                    i += k-1
             
                     
             seqs.append(seq)
