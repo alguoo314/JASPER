@@ -107,6 +107,14 @@ def iteration(num_iter,ite,qf,query_path,k,test,fix,fout,fixedout,database,thres
                             good_before +=1                        
                         if good_before >= len(seq)-1:
                             break
+                    #additional check for case 000...high high...000
+                    #first = seq[max(0,good_before-k+2):seq[max(0,good_before-k+2)+k)] #error for sure
+                    second = seq[max(0,good_before-k+2)+1:max(0,good_before-k+2)+k+1]
+                    k_minus_1 = seq[max(0,good_before-k+2)+k-2:max(0,good_before-k+2)+k+k-2]
+                    k_th =seq[max(0,good_before-k+2)+k-1:max(0,good_before-k+2)+k+k-1]
+                    k_plus_1 = seq[max(0,good_before-k+2)+k:max(0,good_before-k+2)+k+k]
+                    if qf[jf.MerDNA(second).get_canonical()] < threshold and qf[jf.MerDNA(k_minus_1).get_canonical()] < threshold and qf[jf.MerDNA(k_th).get_canonical()] < threshold and qf[jf.MerDNA(k_plus_1).get_canonical()]>=threshold:
+                        good_after = max(0,good_before-k+2)+k #ie good_before+2
                     to_be_fixed = seq[max(0,good_before-k+2):good_after+k-1]
                     wrong_kmers_list.extend([*range(max(0,good_before-k+2),good_after)])
                     
@@ -339,8 +347,8 @@ def fixdiploid(seq_to_be_fixed,k,threshold,qf):
                     elif y == right_bad:
                         l_or_r = "s"
                         
-                    else: #both changed
-                        l_or_r = "b"
+                    else: #both changed not acceptable
+                        continue
                         
      
                     return(left,right,l_or_r)
