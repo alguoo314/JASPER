@@ -250,23 +250,24 @@ def fixing_sid(seq,to_be_fixed,k,threshold,qf,num_below_thres_kmers,good_before,
                fixed_base = "-"
                fixed_ind = [good_before] #insertion after this index
            else:
-               b,i = fix_k_minus_1_case_sub(to_be_fixed,k,threshold,qf) 
-               #try to fix by substitution of one base of one side of the bad stretch
-               if b != None:
-                  original = "s"+seq[good_after-1+i] #i=0 if the middle left base is changed, 1 if middle right
-                  temp  = seq[:good_after-1+i] + b + seq[good_after+i:]                                                           
-                  seq = temp
-                  fixed_base = b
-                  fixed_ind = [good_after-1+i]
+                left,right,l_or_r =  fixdiploid(to_be_fixed,k,threshold,qf,seq,good_before,good_after) #diploidy of two adjacent bases                                
+                if l_or_r !=  None:
+                    if l_or_r == "s": #lefting base is changed                                                                                                        
+                        original = "s"+seq[good_after-1]
+                        fixed_base = str(left)
+                        fixed_ind = [good_after-1]
+                    else:#the righting base is changed                                                                                                                
+                        original = "s"+seq[good_before+1]
+                        fixed_base = str(right)
+                        fixed_ind = [good_before+1]
+                    temp = seq[:good_after-1]+left+seq[good_after:good_before+1] + right + seq[good_before+2:]
+                    seq =  temp
+
                   
         if num_below_thres_kmers < k-1 and num_below_thres_kmers > 1 and len(to_be_fixed)>=k:#skip the good_before = -1 (ie first kmer is bad) case.
-            left,right,l_or_r =  fixdiploid(to_be_fixed,k,threshold,qf) #diploidy
+            left,right,l_or_r =  fixdiploid(to_be_fixed,k,threshold,qf,seq,good_before,good_after) #diploidy
             if l_or_r !=  None: 
-                if l_or_r == "b": #b stands for both bases are changed
-                    original = ["s"+seq[good_after-1],"s"+seq[good_before+1]]
-                    fixed_base = [str(left),str(right)]
-                    fixed_ind = [good_after-1,good_before+1]
-                elif l_or_r == "s": #lefting base is changed
+                if l_or_r == "s": #lefting base is changed
                     original = "s"+seq[good_after-1]
                     fixed_base = str(left)
                     fixed_ind = [good_after-1]
@@ -286,7 +287,7 @@ def fixing_sid(seq,to_be_fixed,k,threshold,qf,num_below_thres_kmers,good_before,
                     fixed_ind = [good_before] #insertion after this index
                 else:
                     removed_base = fix_same_base_del(to_be_fixed,k,threshold,qf,num_below_thres_kmers)
-                    if removed_base != None: #deletion of a base                                                                                                                                                                            
+                    if removed_base != None: #deletion of a base
                         original = "d-"
                         fixed_ind = [good_before]
                         temp = seq[:good_before]+removed_base+seq[good_before:]
@@ -322,20 +323,34 @@ def fixing_sid(seq,to_be_fixed,k,threshold,qf,num_below_thres_kmers,good_before,
         print(sys.exc_info()) #to help debug                                  \                                                                   
         sys.exit(1)         
                 
-def fixdiploid(seq_to_be_fixed,k,threshold,qf):
+def fixdiploid(seq_to_be_fixed,k,threshold,qf,full_seq,good_before,good_after):
+    #for fixing the first base of the last k-mer in L we also need to check the kmers before that contains this base.
+    # for fixing the last b of first kmer in L we also need to check if the kmer starting at good_after is good still
     try:
         left_bad = seq_to_be_fixed[len(seq_to_be_fixed)-k]
         right_bad = seq_to_be_fixed[k-1]
         left = left_bad
         right = right_bad
+        good_before_starting_ind = max(0,good_before-k+1)
+        #bases_before=full_seq[max(0,good_before_starting_ind-):good_before_starting_ind+1] #3 kmers before
+        base_after=''
+        if (good_after+k-1+k-1-len(seq_to_be_fixed)+k) < len(full_seq):
+            base_after = full_seq[good_after+k-1:(good_after+k-1+k-1-len(seq_to_be_fixed)+k)] #the end of the kmer starting with the right changed base = right index-left index -1 + good_after+k-1 
+        else:
+            base_after = full_seq[min(len(full_seq)-1,good_after+k-1):len(full_seq)]
+        before_len=len(base_after)
+        bases_before=full_seq[max(0,good_before_starting_ind-before_len+1):good_before_starting_ind+1]
         for x in 'ACTG':
             for y in 'ACTG':
                 if x ==left_bad and y==right_bad:
                     continue
+                if x!=left_bad and y!=right_bad:
+                    continue
                 trial = seq_to_be_fixed[:len(seq_to_be_fixed)-k]+x+seq_to_be_fixed[len(seq_to_be_fixed)-k+1:k-1]+y+seq_to_be_fixed[k:]
                 fixed = True
-                for i in  range(len(trial)-k+1):
-                    if qf[jf.MerDNA(trial[i:k+i]).get_canonical()] < threshold:
+                check=bases_before+trial+base_after
+                for i in  range(len(check)-k+1):
+                    if qf[jf.MerDNA(check[i:k+i]).get_canonical()] < threshold:
                         fixed  = False
                         break
                 if fixed == True:
@@ -380,24 +395,6 @@ def fix_k_case_sub(seq_to_be_fixed,k,threshold,qf): #when number of conseuctive 
     return None
 
 
-def fix_k_minus_1_case_sub(seq_to_be_fixed,k,threshold,qf): #when number of conseuctive bad kmers is k-1
-    #try to fix by substitution of one base of one side of the bad stretch
-    for r in range(2):
-      bad_base = seq_to_be_fixed[k-2+r]
-      for b in 'ACTG':
-         trial = seq_to_be_fixed
-         if b == bad_base:
-             continue
-         else:
-             trial = trial[:k-2+r]+b+trial[k-1+r:]
-             fixed = True
-             for i in range(len(trial)-k+1):
-                if qf[jf.MerDNA(trial[i:k+i]).get_canonical()] < threshold:
-                    fixed  = False
-                    break
-             if fixed == True:
-                return b,r
-    return None,None
     
 def fix_nearby_subs(seq_to_be_fixed,k,threshold,qf,num_below_thres_kmers): #a substituion nearby another error
     for x in 'ACTG':
