@@ -334,8 +334,8 @@ def fixdiploid(seq_to_be_fixed,k,threshold,qf,full_seq,good_before,good_after):
         good_before_starting_ind = max(0,good_before-k+1)
         #bases_before=full_seq[max(0,good_before_starting_ind-):good_before_starting_ind+1] #3 kmers before
         base_after=''
-        if (good_after+k-1+k-1-len(seq_to_be_fixed)+k) < len(full_seq):
-            base_after = full_seq[good_after+k-1:(good_after+k-1+k-1-len(seq_to_be_fixed)+k)] #the end of the kmer starting with the right changed base = right index-left index -1 + good_after+k-1 
+        if good_after+k-1+int((k-1-len(seq_to_be_fixed)+k)/2) < len(full_seq):
+            base_after = full_seq[good_after+k-1:good_after+k-1+int((k-1-len(seq_to_be_fixed)+k)/2)] #the end of the kmer starting with the right changed base = right index-left index -1 + good_after+k-1 
         else:
             base_after = full_seq[min(len(full_seq)-1,good_after+k-1):len(full_seq)]
         before_len=len(base_after)
