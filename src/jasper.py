@@ -441,16 +441,11 @@ def fix_del(seq_to_be_fixed,k,threshold,qf):
     for alt in 'ATCG':
         trial = seq_to_be_fixed[:k-1]+alt+seq_to_be_fixed[k-1:]
         fixed = True
-        new_bad=0
-        old_bad = len(seq_to_be_fixed)-k+1
-        
         for i in  range(len(trial)-k+1):
             if qf[jf.MerDNA(trial[i:k+i]).get_canonical()] < threshold:
                 fixed  = False
-                new_bad+=1
-        if fixed == True or old_bad-new_bad > 4:
+        if fixed == True:
             return alt
-                        
     return None
 
 def fix_same_base_del(seq_to_be_fixed,k,threshold,qf,num_below_thres_kmers):
@@ -459,9 +454,10 @@ def fix_same_base_del(seq_to_be_fixed,k,threshold,qf,num_below_thres_kmers):
     trial=seq_to_be_fixed
     new_bad = 0
     inserted = 0
-    old_bad = len(seq_to_be_fixed)-k+1
-    current_bad = old_bad
-    while inserted <= 5:
+    original_bad = len(seq_to_be_fixed)-k+1
+    current_bad = original_bad
+    max_insertions = original_bad-1
+    while inserted <= max_insertions:
         new_bad=0
         trial = trial[:k-1]+sb+trial[k-1:]
         fixed = True
@@ -470,9 +466,9 @@ def fix_same_base_del(seq_to_be_fixed,k,threshold,qf,num_below_thres_kmers):
             if qf[jf.MerDNA(trial[i:k+i]).get_canonical()] < threshold:
                 fixed  = False
                 new_bad +=1
-        if (fixed == True) or (new_bad < current_bad-4):
+        if fixed == True:
             return sb*inserted
-        if (new_bad > current_bad):
+        if (new_bad != current_bad-1):
             return None
         else: #added one base may have helped but need more
             current_bad = new_bad
@@ -485,21 +481,25 @@ def fix_same_base_insertion(seq_to_be_fixed,k,threshold,qf,num_below_thres_kmers
     sb = seq_to_be_fixed[k-1] #sb stands for same base
     fixed = False
     reduced = 0
-    remaining_bad = len(seq_to_be_fixed)-k+1
-    while seq_to_be_fixed[k-1] == sb and reduced <= 5:
+    original_bad = len(seq_to_be_fixed)-k+1
+    current_bad = original_bad
+    max_deletions = original_bad-1
+    while seq_to_be_fixed[k-1] == sb and reduced <= max_deletions:
         reduced +=1
         seq_to_be_fixed = seq_to_be_fixed[:ind_to_be_removed] + seq_to_be_fixed[ind_to_be_removed+1:]
         fixed=True
-        new_remaining_bad = 0
+        new_bad = 0
         for i in  range(len(seq_to_be_fixed)-k+1):
             if qf[jf.MerDNA(seq_to_be_fixed[i:k+i]).get_canonical()] < threshold:
                 fixed=False
-                new_remaining_bad +=1
-        if fixed == True or (new_remaining_bad < remaining_bad-4 and new_remaining_bad<(len(seq_to_be_fixed)-k+1)/2):
+                new_bad +=1
+        if (fixed == True):
             return sb*reduced
-        else:
-            remaining_bad = new_remaining_bad
-
+        if (new_bad != current_bad-1):
+            return None
+        else: #delete one more base
+            current_bad = new_bad
+            continue
     return None
 
 
