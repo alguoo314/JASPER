@@ -456,8 +456,8 @@ def fix_same_base_del(seq_to_be_fixed,k,threshold,qf,num_below_thres_kmers):
     inserted = 0
     original_bad = len(seq_to_be_fixed)-k+1
     current_bad = original_bad
-    max_insertions = original_bad-1
-    while inserted <= max_insertions:
+    max_insertions = original_bad
+    while inserted < max_insertions:
         new_bad=0
         trial = trial[:k-1]+sb+trial[k-1:]
         fixed = True
@@ -468,7 +468,7 @@ def fix_same_base_del(seq_to_be_fixed,k,threshold,qf,num_below_thres_kmers):
                 new_bad +=1
         if fixed == True:
             return sb*inserted
-        if (new_bad != current_bad-1):
+        if (new_bad >= current_bad):
             return None
         else: #added one base may have helped but need more
             current_bad = new_bad
@@ -480,22 +480,26 @@ def fix_same_base_insertion(seq_to_be_fixed,k,threshold,qf,num_below_thres_kmers
     ind_to_be_removed = k-1
     sb = seq_to_be_fixed[k-1] #sb stands for same base
     fixed = False
-    reduced = 0
+    deleted = 0
     original_bad = len(seq_to_be_fixed)-k+1
     current_bad = original_bad
-    max_deletions = original_bad-1
-    while seq_to_be_fixed[k-1] == sb and reduced <= max_deletions:
-        reduced +=1
+    max_deletions = original_bad
+    while seq_to_be_fixed[k-1] == sb and deleted < max_deletions:
+        deleted +=1
         seq_to_be_fixed = seq_to_be_fixed[:ind_to_be_removed] + seq_to_be_fixed[ind_to_be_removed+1:]
         fixed=True
         new_bad = 0
+        flag = 0
         for i in  range(len(seq_to_be_fixed)-k+1):
+            flag = 1
             if qf[jf.MerDNA(seq_to_be_fixed[i:k+i]).get_canonical()] < threshold:
                 fixed=False
                 new_bad +=1
+        if (flag == 0):
+            return None
         if (fixed == True):
-            return sb*reduced
-        if (new_bad != current_bad-1):
+            return sb*deleted
+        if (new_bad >= current_bad):
             return None
         else: #delete one more base
             current_bad = new_bad
