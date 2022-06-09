@@ -50,19 +50,11 @@ To run JASPER, execute <PATH>/bin/jasper.sh with the following options:\
 -p, --num_passes=utint16         The number of iterations of running jasper for fixing (2). A number smaller than 6 is usually more than sufficient
 -h, --help                       This message
 -v, --verbose                    Output information (False)
--d. --debug                      Debug mode. If supplied, all the _iter*batch*csv and _iter*batch*fa.temp files will be kept to help debugging 
+-d. --debug                      Debug mode. If supplied, all the _iter*batch*csv and _iter*batch*fa.temp files will be kept to for debugging 
 ```
+When JASPER runs with --reads, it creates mer_counts.jf Jellyfish k-mer count database from the reads.  On subsequent runs in the same folder, if mer_counts.jf exists, it re-uses the mer_counts.jf.  Here is an example of how to run JASPER:
 
-Below is showing examples how to run Jasper (Each int represent an integer)\
-If I have the reads to build the .jf file and would like the program to determine the two threshold. Also want both testing and fixing outputs\
 ```shell
-python jasper.py --reads read1.fastq (read2.fastq, etc.)  --query assembly.fasta --ksize int --test --fix --fout fix.csv  --tout test.csv -ff fixed.fasta
+/PATH/bin/jasper.py --reads '/path/read1.fastq /path/read2.fastq' -a assembly.fasta -k 25 -t 16 -p 4 1>jasper.out 2>&1
 ```
-If I have the reads to build the .jf file and want a specific repetitve region threshold (or bad kmer threshold, just providing the --threshold argument instead of -repthre)
-```shell
-python jasper.py --reads read1.fastq (read2.fastq, etc.) -rep_thre int --query assembly.fasta --ksize int --test --fix --fout fix.csv  --tout test.csv -ff fixed.fasta
-```
-If I have the .jf file already along with the two thresholds. Also want both testing and fixing outputs
-```shell
-python jasper.py --db mydb.jf  --threshold int -rep_thre int --query assembly.fasta --ksize int --test --fix --fout fix.csv  --tout test.csv -ff fixed.fasta 
-```
+This command will polish assembly.fasta, reads /path/read1.fastq /path/read2.fastq using 12 compute cores, with 4 passes of polishing.  jasper.out will contain the diagnostic output including the QV value before and after polishing, and the polished assembly will be output as assembly.fasta.fixed.fasta.  
