@@ -31,7 +31,7 @@ make -j 4
 make install
 ```
 This will install the python binding in $HOME/lib/python2.7/site-packages (adjust based on your Python version).
-Then, for Python, an environment variable PYTHONPATH needs to be set. For example:
+Then, an environment variable PYTHONPATH needs to be set. For example:
 
 ```shell
 export PYTHONPATH=$HOME/lib/python2.7/site-packages 
