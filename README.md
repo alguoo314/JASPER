@@ -34,7 +34,7 @@ This will install the python binding in $HOME/lib/python2.7/site-packages (adjus
 Then, an environment variable PYTHONPATH needs to be set. For example:
 
 ```shell
-export PYTHONPATH=$HOME/lib/python2.7/site-packages 
+export PYTHONPATH=$HOME/lib/python3.8/site-packages 
 ```
     
 ## Running JASPER
