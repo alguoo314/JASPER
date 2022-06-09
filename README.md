@@ -7,14 +7,14 @@ JASPER (Jellyfish based Assembly Sequence Polisher for Error Reduction) is an ef
 * Jellyfish (https://github.com/gmarcais/Jellyfish)
 
 ## Installation
-To install, please download the latest release tarball from the Releases section, and use "tar -xzf" to unpack the archive.  Then cd to the resulting folder and run ./configure --prefix=<JASPER INSTALLATION FOLDER> && make install.  For example:
+To install, please download the latest release tarball from the Releases section, and use "tar -xzf" to unpack the archive.  Then cd to the resulting folder and run ./configure --prefix=$PWD && make install.  For example:
 ```shell
 tar -xzf jasper-1.0.0.tar.gz
 cd jasper-1.0.0
 ./configure --prefix=$PWD
 make install
 ```
-JASPER will be available as <JASPER INSTALLATION FOLDER>/bin/jasper.sh.  Upon successful install, you can type <JASPER INSTALLATION FOLDER>/bin/jasper.sh -h to get usage information.
+JASPER will be available as $PWD/bin/jasper.sh.  Upon successful install, you can type $PWD/bin/jasper.sh -h to get usage information.
     
 JASPER uses python binding of Jellyfish. To configure Jellyfish Python binding, download Jellyfish, and then configure and compile with:
 
