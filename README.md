@@ -57,4 +57,4 @@ When JASPER runs with --reads, it creates mer_counts.jf Jellyfish k-mer count da
 ```shell
 /PATH/bin/jasper.py --reads '/path/read1.fastq /path/read2.fastq' -a assembly.fasta -k 25 -t 16 -p 4 1>jasper.out 2>&1
 ```
-This command will polish assembly.fasta using reads /path/read1.fastq and /path/read2.fastq with 16 compute cores and with 4 passes of polishing. jasper.out will contain the diagnostic output including the QV value before and after polishing, and the polished assembly will be output as assembly.fasta.fixed.fasta.  
+This command will polish assembly.fasta using reads /path/read1.fastq and /path/read2.fastq with 16 threads and with 4 passes of polishing. jasper.out will contain the diagnostic output including the QV value before and after polishing, and the polished assembly will be output as assembly.fasta.fixed.fasta.  
