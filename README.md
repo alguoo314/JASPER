@@ -16,7 +16,7 @@ make install
 ```
 JASPER will be available as $PWD/bin/jasper.sh.  Upon successful install, you can type $PWD/bin/jasper.sh -h to get usage information.
     
-JASPER uses python binding of Jellyfish. To configure Jellyfish Python binding, download Jellyfish, and then configure and compile with:
+JASPER uses python binding of Jellyfish. To configure Jellyfish Python binding, download and install Jellyfish, and then configure and compile with:
 
 ```shell
 ./configure --enable-python-binding 
