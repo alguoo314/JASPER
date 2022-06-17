@@ -55,6 +55,6 @@ To run JASPER, execute <PATH>/bin/jasper.sh with the following options:\
 When JASPER runs with --reads, it creates mer_counts.jf Jellyfish k-mer count database from the reads. On subsequent runs in the same folder, if mer_counts.jf exists, it re-uses the mer_counts.jf.  Here is an example of how to run JASPER:
 
 ```shell
-/PATH/bin/jasper.py --reads '/path/read1.fastq /path/read2.fastq' -a assembly.fasta -k 25 -t 16 -p 4 1>jasper.out 2>&1
+/PATH/bin/jasper.sh --reads '/path/read1.fastq /path/read2.fastq' -a assembly.fasta -k 25 -t 16 -p 4 1>jasper.out 2>&1
 ```
 This command will polish assembly.fasta using reads /path/read1.fastq and /path/read2.fastq with 16 threads and with 4 passes of polishing. jasper.out will contain the diagnostic output including the QV value before and after polishing, and the polished assembly will be output as assembly.fasta.fixed.fasta.  
