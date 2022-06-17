@@ -45,7 +45,7 @@ To run JASPER, execute <PATH>/bin/jasper.sh with the following options:\
 -t, --threads=uint32             Number of threads (1)
 -a --assembly                    *Path to the assembly file
 -j --jf                          Path to the jellyfish database file. Required if --reads is not provided
--r --reads                       Path to the file(s) containing the reads to construct a jellyfish database. If two or more files are provided, please enclose the list with single-quotes, e.g. -r '/path_to/file1.fastq /path_to/file2.fastq'. Required if --jf is not provided
+-r --reads                       Path to the file(s) containing the reads to construct a jellyfish database. If two or more files are provided, please enclose the list with single-quotes, e.g. -r '/path_to/file1.fastq /path_to/file2.fastq'. Both fasta and fastq formats are acceptable. Required if --jf is not provided.
 -k, --kmer=uint64                k-mer size (25)
 -p, --num_passes=utint16         The number of iterations of running jasper for fixing (2). A number smaller than 6 is usually more than sufficient
 -h, --help                       This message
