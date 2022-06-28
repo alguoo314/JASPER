@@ -4,7 +4,7 @@ JASPER (Jellyfish based Assembly Sequence Polisher for Error Reduction) is an ef
 
 ## Dependencies
 * Python 3
-* Jellyfish (https://github.com/gmarcais/Jellyfish)
+* Jellyfish version 2 or above (https://github.com/gmarcais/Jellyfish)
 
 ## Installation
 To install, please download the latest release tarball from the Releases section, and use "tar -xzf" to unpack the archive.  Then cd to the resulting folder and run ./configure --prefix=$PWD && make install.  For example:
@@ -16,14 +16,14 @@ make install
 ```
 JASPER will be available as $PWD/bin/jasper.sh.  Upon successful install, you can type $PWD/bin/jasper.sh -h to get usage information.
     
-JASPER uses python binding of Jellyfish. To configure Jellyfish Python binding, download and install Jellyfish, and then configure and compile with:
+JASPER uses python binding of Jellyfish. To configure Jellyfish Python binding, download and install the latest release of Jellyfish from https://github.com/gmarcais/Jellyfish, and then configure and compile with:
 
 ```shell
 ./configure --enable-python-binding 
 make -j 4
 sudo make install
 ```
-By default, Jellyfish is installed in /usr/local and the bindings are installed in the proper system location. If you do not have root acess, you can pass the --prefix switch is passed, to have the bindings install in the given directory. For example:
+By default, Jellyfish installs in /usr/local and the bindings are installed in the proper system location. If you do not have root access, you can pass the --prefix switch to have the bindings install in the given directory. For example:
 
 ```shell
 ./configure --prefix=$HOME --enable-python-binding
