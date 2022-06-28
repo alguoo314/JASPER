@@ -30,7 +30,7 @@ By default, Jellyfish is installed in /usr/local and the bindings are installed 
 make -j 4
 make install
 ```
-This will install the python binding in $HOME/lib/python2.7/site-packages (adjust based on your Python version).
+This will install the python binding in $HOME/lib/python3.8/site-packages (adjust based on your Python version).
 Then, an environment variable PYTHONPATH needs to be set. For example:
 
 ```shell
