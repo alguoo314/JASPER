@@ -23,14 +23,15 @@ JASPER uses Python binding of Jellyfish. To configure Jellyfish Python binding, 
 make -j 4
 sudo make install
 ```
-By default, Jellyfish installs in /usr/local and the bindings are installed in the proper system location. If you do not have root access, you can pass the --prefix switch to have the bindings install in the given directory. For example:
+By default, Jellyfish installs in /usr/local and the bindings are installed in the proper system location. The "python" command must alias to "python3" or "python3.x" in the system for Jellyfish binding to install properly. If the "python" is aliased to "python3.8" then Jellyfish binding will install into python3.8/site-packages/. Please type "which python" to ensure that "python" points to a python3.x version before running the command below. Furthermore, if you do not have root access, you can pass the --prefix switch to have the bindings install in the given directory. For example:
 
 ```shell
 ./configure --prefix=$HOME --enable-python-binding
 make -j 4
 make install
 ```
-This will install the python binding in $HOME/lib/python3.8/site-packages (adjust based on your Python version).
+This will install the python binding in $HOME/lib/python3.8/site-packages (adjust based on your Python version). 
+
 Then, an environment variable PYTHONPATH needs to be set. For example:
 
 ```shell
