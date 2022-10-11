@@ -21,15 +21,4 @@ test_SOURCES = src/test.cc
 noinst_HEADERS += src/test.hpp
 YAGGO_SOURCES += src/test_cmdline.hpp
 
-##############################
-# Unit tests
-##############################
-TESTS = all_tests
-check_PROGRAMS = all_tests
-all_tests_CXXFLAGS = $(AM_CXXFLAGS) -I$(top_srcdir)/unittests
-all_tests_LDFLAGS = -lpthread
-all_tests_SOURCES = unittests/gtest/gtest-all.cc unittests/gtest/gtest_main.cc unittests/gtest/gtest.h
-
-all_tests_SOURCES += unittests/test_trivial.cc
-
 dist_bin_SCRIPTS = src/jasper.sh src/jasper.py src/jellyfish.py
