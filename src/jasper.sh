@@ -136,7 +136,7 @@ if [ -z ${JF_DB+x} ];then
           log "Using existing jellyfish database mer_counts.jf"
         else
           log "Creating jellyfish database mer_counts.jf"
-          zcat -f $READS | jellyfish count -C -s $JF_SIZE -m 25 -o $JF_DB -t $NUM_THREADS /dev/stdin
+          zcat -f $READS | jellyfish count -C -s $JF_SIZE -m $KMER -o $JF_DB -t $NUM_THREADS /dev/stdin
         fi
     else
         error_exit "Either a jf database or files of polishing reads must be provided in the argument."
