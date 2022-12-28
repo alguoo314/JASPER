@@ -173,7 +173,7 @@ log "Determining lower threshold for bad kmers"
 jellyfish histo -t $NUM_THREADS $JF_DB > jfhisto.csv && \
 jellyfish.py  jfhisto.csv > threshold.txt && \
 rm jfhisto.csv && \
-rm -f jasper.correct.success && \
+rm -f jasper.split.success && \
 touch jasper.threshold.success || error_exit "Computing threshold failed"
 fi
 

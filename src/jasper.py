@@ -15,9 +15,8 @@ def main(contigs,query_path,k,test,fix,fout,fixedout,database,thre,num_iter):
             sys.stderr.write("Wrong arguments. One and only one between the contigs and database argument should be given. ")
             return
         
-        threshold,db = jellyfish(contigs, database, k,thre)
-        
-        #print("Threshold =  {}".format(threshold))
+        threshold,db = jellyfish(contigs, database, k,thre)        
+
         qf  = jf.QueryMerFile(db)
         for ite in range(num_iter+1): #num_iter rounds of fixing plus one more round to find the final q value
             query_path = iteration(num_iter,ite,qf,query_path,k,test,fix,fout,fixedout,database,threshold)
@@ -47,7 +46,6 @@ def iteration(num_iter,ite,qf,query_path,k,test,fix,fout,fixedout,database,thres
         for seqname,seq in seq_dict.items():
             seq_names.append(seqname)
             total_kmers += len(seq)-k+1
-            #print(seqname+":")
             rare_occurance = 0
             good_before = -1 #index of the last guaranteed good base before the mismatch                                                                                     
             backtracked = False
@@ -84,7 +82,7 @@ def iteration(num_iter,ite,qf,query_path,k,test,fix,fout,fixedout,database,thres
                     prev_good_count = qf[jf.MerDNA(seq[j:k+j]).get_canonical()]
                     kmer_count = qf[jf.MerDNA(seq[i:k+i]).get_canonical()]                                                            
 
-                    if j == -1: #even the first kmer is bad                                                                                                                                 
+                    if j == -1: #even the first kmer is bad                                                                                                                               
                         good_before = -1
                     while kmer_count < threshold and i < len(seq)-k+1: #go forward back to i
                         i+=1
@@ -108,7 +106,6 @@ def iteration(num_iter,ite,qf,query_path,k,test,fix,fout,fixedout,database,thres
                         if good_before >= len(seq)-1:
                             break
                     #additional check for case 000...high high...000
-                    #first = seq[max(0,good_before-k+2):seq[max(0,good_before-k+2)+k)] #error for sure
                     second = seq[max(0,good_before-k+2)+1:max(0,good_before-k+2)+k+1]
                     k_minus_1 = seq[max(0,good_before-k+2)+k-2:max(0,good_before-k+2)+k+k-2]
                     k_th =seq[max(0,good_before-k+2)+k-1:max(0,good_before-k+2)+k+k-1]
@@ -235,7 +232,7 @@ def fixing_sid(seq,to_be_fixed,k,threshold,qf,num_below_thres_kmers,good_before,
                     fixed_base = '-'
                     fixed_ind = [good_after-2]
                                     
-        if num_below_thres_kmers == k-1: #deletion or same base insertion or substitution
+        elif num_below_thres_kmers == k-1: #deletion or same base insertion or substitution
            removed_base = fix_del(to_be_fixed,k,threshold,qf)
            if removed_base != None: #deletion of a base
                original = "d-"
@@ -264,7 +261,7 @@ def fixing_sid(seq,to_be_fixed,k,threshold,qf,num_below_thres_kmers,good_before,
                     seq =  temp
 
                   
-        if num_below_thres_kmers < k-1 and num_below_thres_kmers > 1 and len(to_be_fixed)>=k:#skip the good_before = -1 (ie first kmer is bad) case.
+        elif num_below_thres_kmers < k-1 and num_below_thres_kmers > 1 and len(to_be_fixed)>=k:#skip the good_before = -1 (ie first kmer is bad) case.
             left,right,l_or_r =  fixdiploid(to_be_fixed,k,threshold,qf,seq,good_before,good_after) #diploidy
             if l_or_r !=  None: 
                 if l_or_r == "s": #lefting base is changed
@@ -294,7 +291,7 @@ def fixing_sid(seq,to_be_fixed,k,threshold,qf,num_below_thres_kmers,good_before,
                         seq = temp
                         fixed_base = removed_base
 
-        if num_below_thres_kmers > k: #two or more nearby errors. Fix substitutions only.
+        elif num_below_thres_kmers > k: #two or more nearby errors. Fix substitutions only.
             x,y = fix_nearby_subs(to_be_fixed,k,threshold,qf,num_below_thres_kmers)
             if x != None and y!=None:
                 original = ["s"+seq[good_after-1-num_below_thres_kmers+k],"s"+seq[good_after-1]] 
@@ -332,7 +329,6 @@ def fixdiploid(seq_to_be_fixed,k,threshold,qf,full_seq,good_before,good_after):
         left = left_bad
         right = right_bad
         good_before_starting_ind = max(0,good_before-k+1)
-        #bases_before=full_seq[max(0,good_before_starting_ind-):good_before_starting_ind+1] #3 kmers before
         base_after=''
         if good_after+k-1+int((k-1-len(seq_to_be_fixed)+k)/2) < len(full_seq):
             base_after = full_seq[good_after+k-1:good_after+k-1+int((k-1-len(seq_to_be_fixed)+k)/2)] #the end of the kmer starting with the right changed base = right index-left index -1 + good_after+k-1 
