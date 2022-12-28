@@ -136,7 +136,7 @@ if [ -z ${JF_DB+x} ];then
           log "Using existing jellyfish database mer_counts.jf"
         else
           log "Creating jellyfish database mer_counts.jf"
-          zcat -f $READS | jellyfish count -C -s $JF_SIZE -m $KMER -o $JF_DB -t $NUM_THREADS /dev/stdin
+          zcat -f $READS | jellyfish count -C -s $JF_SIZE -m 25 -o $JF_DB -t $NUM_THREADS /dev/stdin
         fi
     else
         error_exit "Either a jf database or files of polishing reads must be provided in the argument."
@@ -190,7 +190,7 @@ rm -f $QUERY_FN.batch.*.fa && \
 perl -ane 'BEGIN{$seq="";$bs=int('$BATCH_SIZE');}{if($F[0] =~ /^>/){if(not($seq eq "")){for($ci=0;$ci<length($seq);$ci+=$bs){print "$ctg:$ci\n",substr($seq,$ci,$bs),"\n";}}$ctg=$F[0];$seq=""}else{$seq.=$F[0]}}END{if(not($seq eq "")){for($ci=0;$ci<length($seq);$ci+=$bs){print "$ctg:$ci\n",substr($seq,$ci,$bs),"\n";}}}' $QUERY | \
 perl -ane 'BEGIN{$batch_index=0;$output=0;open(FILE,">'$QUERY_FN'.batch.".$batch_index.".fa");}{if($F[0]=~/^>/){if($output>int('$BATCH_SIZE')){close(FILE);$batch_index++;open(FILE,">'$QUERY_FN'.batch.".$batch_index.".fa");$output=0;}}else{$output+=length($F[0]);}print FILE join(" ",@F),"\n";}' && \
 rm -f jasper.correct.success && \
-touch jasper.split.success || error_exit "Splitting files failed, do you have enough disk space?"
+touch jasper.split.success || error_exit "Splitting files failed, do you have enough dick space?"
 fi
 
 if [ ! -e jasper.correct.success ];then
