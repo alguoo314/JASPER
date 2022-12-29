@@ -510,7 +510,8 @@ def base_extension(seq_to_be_fixed,qf,k,good_kmer_before,good_k_mer_after,thresh
     paths.append(good_kmer_before[-1])  # the last base of the initial k-mer makes the first path                                                                                             
     right_end = good_k_mer_after[:-1]
     for i in range(1,1+max_ext):
-        if len(paths) > 5000: #may change later
+        paths = [l for l in paths if len(l) > 0]
+        if len(paths) > 2000: #may change later
             return None
         last_path = len(paths) - 1  # since the number of paths will be changing we need to record this                                                                                       
         for p in range(last_path+1):
