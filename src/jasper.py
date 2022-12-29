@@ -51,7 +51,7 @@ def iteration(num_iter,ite,qf,query_path,k,test,fix,fout,fixedout,database,thres
             backtracked = False
             i = 0 #first k mer at position 0
             wrong_kmers_list = []                                                                                                       
-            while i < len(seq)-k+1: #k is 25 :  
+            while i < len(seq)-k+1:
                 mer_string = seq[i:k+i]
                 N = mer_string.find('N') #ignore all kmers containing non acgt bases
                 if N >= 0:
@@ -285,41 +285,24 @@ def fixing_sid(seq,to_be_fixed,k,threshold,qf,num_below_thres_kmers,good_before,
                         seq = seq[:good_before]+removed_base+seq[good_before:]
                         fixed_base = removed_base
 
-        elif num_below_thres_kmers > k: #two or more nearby errors. Fix substitutions first.
-            x,y = fix_nearby_subs(to_be_fixed,k,threshold,qf,num_below_thres_kmers)
-            if x != None and y!=None:
-                original = ["s"+seq[good_after-1-num_below_thres_kmers+k],"s"+seq[good_after-1]] 
-                seq = seq[:good_after-1-num_below_thres_kmers+k] + x + seq[good_after-num_below_thres_kmers+k:good_after-1] + y + seq[good_after:]
-                fixed_base = [x,y]
-                fixed_ind = [good_after-1-num_below_thres_kmers+k,good_after-1]
-            elif x != None:
-                original = "s"+seq[good_after-1-num_below_thres_kmers+k]
-                seq = seq[:good_after-1-num_below_thres_kmers+k] + x + seq[good_after-num_below_thres_kmers+k:]
-                fixed_base = x
-                fixed_ind = [good_after-1-num_below_thres_kmers+k]
-            elif y!= None:
-                original = "s"+seq[good_after-1]
-                seq = seq[:good_after-1]+ y + seq[good_after:]
-                fixed_base = y
-                fixed_ind = [good_after-1]
-            else:
-                good_kmer_before = seq[good_before-k+1:good_before+1] 
-                good_k_mer_after = seq[good_after:good_after+k] 
-                fixed_seq = base_extension(to_be_fixed,qf,k,good_kmer_before,good_k_mer_after,threshold)
-                if fixed_seq != None:
-                    seq = seq[:good_before+1]+fixed_seq+seq[good_after:]
-                    fixed_ind = []
-                    fixed_base = []
-                    original = []
-                    for index, s in enumerate(difflib.ndiff(fixed_seq,to_be_fixed)):
-                        if s[0]=='-': #fixed a deletion
-                           original.append("d-")
-                           fixed_ind.append(index+(good_before+1))
-                           fixed_base.append(s[-1])
-                        elif s[0]=='+': #fixed an insertion
-                            fixed_base.append('-')
-                            original.append("i"+s[-1])
-                            fixed_ind.append(index+good_before+1)
+        elif num_below_thres_kmers > k: #two or more nearby errors.
+            good_kmer_before = seq[good_before-k+1:good_before+1] 
+            good_k_mer_after = seq[good_after:good_after+k] 
+            fixed_seq = base_extension(to_be_fixed,qf,k,good_kmer_before,good_k_mer_after,threshold)
+            if fixed_seq != None:
+                seq = seq[:good_before+1]+fixed_seq+seq[good_after:]
+                fixed_ind = []
+                fixed_base = []
+                original = []
+                for index, s in enumerate(difflib.ndiff(fixed_seq,to_be_fixed)):
+                    if s[0]=='-': #fixed a deletion
+                        original.append("d-")
+                        fixed_ind.append(index+(good_before+1))
+                        fixed_base.append(s[-1])
+                    elif s[0]=='+': #fixed an insertion
+                        fixed_base.append('-')
+                        original.append("i"+s[-1])
+                        fixed_ind.append(index+good_before+1)
                         
                         
         return seq,fixed_base, original, fixed_ind
@@ -527,6 +510,8 @@ def base_extension(seq_to_be_fixed,qf,k,good_kmer_before,good_k_mer_after,thresh
     paths.append(good_kmer_before[-1])  # the last base of the initial k-mer makes the first path                                                                                             
     right_end = good_k_mer_after[:-1]
     for i in range(1,1+max_ext):
+        if len(paths) > 5000: #may change later
+            return None
         last_path = len(paths) - 1  # since the number of paths will be changing we need to record this                                                                                       
         for p in range(last_path+1):
             if not paths[p]:
