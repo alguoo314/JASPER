@@ -5,8 +5,9 @@ import os
 import argparse
 import math
 import csv
+import difflib
 import dna_jellyfish as jf
-import textwrap
+#import textwrap
 
 def main(contigs,query_path,k,test,fix,fout,fixedout,database,thre,num_iter):
     try:
@@ -46,7 +47,6 @@ def iteration(num_iter,ite,qf,query_path,k,test,fix,fout,fixedout,database,thres
         for seqname,seq in seq_dict.items():
             seq_names.append(seqname)
             total_kmers += len(seq)-k+1
-            rare_occurance = 0
             good_before = -1 #index of the last guaranteed good base before the mismatch                                                                                     
             backtracked = False
             i = 0 #first k mer at position 0
@@ -219,16 +219,14 @@ def fixing_sid(seq,to_be_fixed,k,threshold,qf,num_below_thres_kmers,good_before,
             b = fix_k_case_sub(to_be_fixed,k,threshold,qf)
             if b !=  None:
                 original = "s"+seq[good_after-1]
-                temp  = seq[:good_after-1] + b + seq[good_after:]                                                           
-                seq = temp
+                seq  = seq[:good_after-1] + b + seq[good_after:]
                 fixed_base = b
                 fixed_ind = [good_after-1]
             else:
                 b = fix_insert(to_be_fixed,k,threshold,qf)
                 if b != None:
                     original = "i"+seq[good_after-1]
-                    temp = seq[:good_after-1] + seq[good_after:]
-                    seq = temp
+                    seq = seq[:good_after-1] + seq[good_after:]
                     fixed_base = '-'
                     fixed_ind = [good_after-2]
                                     
@@ -237,13 +235,11 @@ def fixing_sid(seq,to_be_fixed,k,threshold,qf,num_below_thres_kmers,good_before,
            if removed_base != None: #deletion of a base
                original = "d-"
                fixed_ind = [good_after]
-               temp = seq[:good_after]+removed_base+seq[good_after:]
-               seq = temp
+               seq = seq[:good_after]+removed_base+seq[good_after:]
                fixed_base = removed_base 
            elif fix_same_base_insertion(to_be_fixed,k,threshold,qf,num_below_thres_kmers)!= None:
                original = "i"+seq[good_before]
-               temp = seq[:good_before] + seq[good_before+1:]     
-               seq = temp
+               seq = seq[:good_before] + seq[good_before+1:]
                fixed_base = "-"
                fixed_ind = [good_before] #insertion after this index
            else:
@@ -257,8 +253,8 @@ def fixing_sid(seq,to_be_fixed,k,threshold,qf,num_below_thres_kmers,good_before,
                         original = "s"+seq[good_before+1]
                         fixed_base = str(right)
                         fixed_ind = [good_before+1]
-                    temp = seq[:good_after-1]+left+seq[good_after:good_before+1] + right + seq[good_before+2:]
-                    seq =  temp
+                    seq = seq[:good_after-1]+left+seq[good_after:good_before+1] + right + seq[good_before+2:]
+                    
 
                   
         elif num_below_thres_kmers < k-1 and num_below_thres_kmers > 1 and len(to_be_fixed)>=k:#skip the good_before = -1 (ie first kmer is bad) case.
@@ -272,14 +268,13 @@ def fixing_sid(seq,to_be_fixed,k,threshold,qf,num_below_thres_kmers,good_before,
                     original = "s"+seq[good_before+1]
                     fixed_base = str(right)
                     fixed_ind = [good_before+1]
-                temp = seq[:good_after-1]+left+seq[good_after:good_before+1] + right + seq[good_before+2:]
-                seq =  temp
+                seq = seq[:good_after-1]+left+seq[good_after:good_before+1] + right + seq[good_before+2:]
+                
             else: 
                 inserted_base = fix_same_base_insertion(to_be_fixed,k,threshold,qf,num_below_thres_kmers)
                 if inserted_base != None:
                     original = "i"+inserted_base
-                    temp = seq[:good_before] + seq[good_before+len(inserted_base):]     
-                    seq = temp
+                    seq = seq[:good_before] + seq[good_before+len(inserted_base):]     
                     fixed_base = "-"
                     fixed_ind = [good_before] #insertion after this index
                 else:
@@ -287,31 +282,46 @@ def fixing_sid(seq,to_be_fixed,k,threshold,qf,num_below_thres_kmers,good_before,
                     if removed_base != None: #deletion of a base
                         original = "d-"
                         fixed_ind = [good_before]
-                        temp = seq[:good_before]+removed_base+seq[good_before:]
-                        seq = temp
+                        seq = seq[:good_before]+removed_base+seq[good_before:]
                         fixed_base = removed_base
 
-        elif num_below_thres_kmers > k: #two or more nearby errors. Fix substitutions only.
+        elif num_below_thres_kmers > k: #two or more nearby errors. Fix substitutions first.
             x,y = fix_nearby_subs(to_be_fixed,k,threshold,qf,num_below_thres_kmers)
             if x != None and y!=None:
                 original = ["s"+seq[good_after-1-num_below_thres_kmers+k],"s"+seq[good_after-1]] 
-                temp = seq[:good_after-1-num_below_thres_kmers+k] + x + seq[good_after-num_below_thres_kmers+k:good_after-1] + y + seq[good_after:]
-                seq = temp
+                seq = seq[:good_after-1-num_below_thres_kmers+k] + x + seq[good_after-num_below_thres_kmers+k:good_after-1] + y + seq[good_after:]
                 fixed_base = [x,y]
                 fixed_ind = [good_after-1-num_below_thres_kmers+k,good_after-1]
             elif x != None:
                 original = "s"+seq[good_after-1-num_below_thres_kmers+k]
-                temp = seq[:good_after-1-num_below_thres_kmers+k] + x + seq[good_after-num_below_thres_kmers+k:]
-                seq =  temp
+                seq = seq[:good_after-1-num_below_thres_kmers+k] + x + seq[good_after-num_below_thres_kmers+k:]
                 fixed_base = x
                 fixed_ind = [good_after-1-num_below_thres_kmers+k]
             elif y!= None:
                 original = "s"+seq[good_after-1]
-                temp = seq[:good_after-1]+ y + seq[good_after:]
-                seq = temp
+                seq = seq[:good_after-1]+ y + seq[good_after:]
                 fixed_base = y
                 fixed_ind = [good_after-1]
-                                                            
+            else:
+                good_kmer_before = seq[good_before-k+1:good_before+1] 
+                good_k_mer_after = seq[good_after:good_after+k] 
+                fixed_seq = base_extension(to_be_fixed,qf,k,good_kmer_before,good_k_mer_after,threshold)
+                if fixed_seq != None:
+                    seq = seq[:good_before+1]+fixed_seq+seq[good_after:]
+                    fixed_ind = []
+                    fixed_base = []
+                    original = []
+                    for index, s in enumerate(difflib.ndiff(fixed_seq,to_be_fixed)):
+                        if s[0]=='-': #fixed a deletion
+                           original.append("d-")
+                           fixed_ind.append(index+(good_before+1))
+                           fixed_base.append(s[-1])
+                        elif s[0]=='+': #fixed an insertion
+                            fixed_base.append('-')
+                            original.append("i"+s[-1])
+                            fixed_ind.append(index+good_before+1)
+                        
+                        
         return seq,fixed_base, original, fixed_ind
     except:
         exception_type, exception_object, exception_traceback = sys.exc_info()
@@ -410,9 +420,10 @@ def fix_nearby_subs(seq_to_be_fixed,k,threshold,qf,num_below_thres_kmers): #a su
                 if fixed == True:
                     return x,y
                 else:
-                    if qf[jf.MerDNA(seq_to_be_fixed[:k-1]+x).get_canonical()]  >= threshold and qf[jf.MerDNA(seq_to_be_fixed[1:k-1]+x+seq_to_be_fixed[k]).get_canonical()] >= threshold:
+                    l = len(seq_to_be_fixed)
+                    if qf[jf.MerDNA(seq_to_be_fixed[:k-1]+x).get_canonical()]  >= threshold and qf[jf.MerDNA(seq_to_be_fixed[1:k-1]+x+seq_to_be_fixed[k]).get_canonical()] and qf[jf.MerDNA(seq_to_be_fixed[2:k-1]+x+seq_to_be_fixed[k:k+2]).get_canonical()] >= threshold: # >3 fixed
                         return x,None
-                    elif qf[jf.MerDNA(seq_to_be_fixed[len(seq_to_be_fixed)-k-1]+y+seq_to_be_fixed[len(seq_to_be_fixed)-k+1:len(seq_to_be_fixed)-1]).get_canonical()]  >= threshold and qf[jf.MerDNA(y+seq_to_be_fixed[len(seq_to_be_fixed)-k+1:]).get_canonical()] >= threshold:
+                    elif qf[jf.MerDNA(seq_to_be_fixed[l-k-2:l-k]+y+seq_to_be_fixed[l-k+1:l-2]).get_canonical()] >= threshold and  qf[jf.MerDNA(seq_to_be_fixed[l-k-1]+y+seq_to_be_fixed[l-k+1:l-1]).get_canonical()]  >= threshold and qf[jf.MerDNA(y+seq_to_be_fixed[l-k+1:]).get_canonical()] >= threshold:
                        return None,y
     return None, None
                
@@ -503,6 +514,48 @@ def fix_same_base_insertion(seq_to_be_fixed,k,threshold,qf,num_below_thres_kmers
     return None
 
 
+def base_extension(seq_to_be_fixed,qf,k,good_kmer_before,good_k_mer_after,threshold):
+    if len(good_kmer_before) < k:
+        raise Exception("Path not long enough") #remove this later                                                                                                                            
+    bases = ["A", "C", "G", "T"]
+    paths = []  # array of all possible extensions                                                                                                                                            
+    #K+L-1-2(K-1) = L-K+1 deleted                                                                                                                                                             
+    L = len(seq_to_be_fixed)+1-k #number of bad kmers                                                                                                                                         
+    max_ext = L-k+5 #allow insertion of 4 more bases than before                                                                                                                              
+    found_good_path = False
+    start_km1 = good_kmer_before[:-1]   # store the k-1 bases in a variable no need to carry these around                                                                                     
+    paths.append(good_kmer_before[-1])  # the last base of the initial k-mer makes the first path                                                                                             
+    right_end = good_k_mer_after[:-1]
+    for i in range(1,1+max_ext):
+        last_path = len(paths) - 1  # since the number of paths will be changing we need to record this                                                                                       
+        for p in range(last_path+1):
+            if not paths[p]:
+                continue
+            km1 = (start_km1 + paths[p])[-k+1:]  # get the k-1 bases off the end                                                                                                              
+            path_ext_count = 0  # this becomes 1 if we find an extension, and if no extension, then we delete the path                                                                        
+            for j in range(4):  # try to extend                                                       
+                score = qf[jf.MerDNA(km1 + bases[j]).get_canonical()]
+                if score >= threshold:
+                    if i >= max_ext-8: #the path is <4 bases short of deleted part. Start checking if it is finished.                                                                         
+                        found_good_path = True
+                        right_half_connected = km1+ bases[j]+right_end
+                        for n in range(1,len(right_half_connected)-k+1): #check the remaining kmers               
+                            if qf[jf.MerDNA(right_half_connected[n:k+n]).get_canonical()] < threshold:
+                                found_good_path = False
+                                break
+                        if found_good_path:
+                            return paths[p][1:]
+
+                    #not a good path YET                                                                                                                                                      
+                    if path_ext_count == 0:  # first extension -- extend the current path                                                                                                     
+                        paths[p] += bases[j]
+                        path_ext_count = 1
+                    else:  # another extension -- add a new path                                                                                                                              
+                        paths.append(paths[p][:-1] + bases[j])
+            if path_ext_count == 0:
+                paths[p] = ""  # no extensions, kill this path 
+    return None
+
 
 def parse_fasta(query_file):
     f = open(query_file,"r")
@@ -537,4 +590,3 @@ if __name__ == '__main__':
     parser.add_argument("-p","--num_passes", type=int, default = 2, help = "The number of iterations of fixing.")
     args = parser.parse_args()
     main(args.reads,args.query,args.ksize,args.test,args.fix,args.fout,args.fixedfasta,args.db,args.threshold,args.num_passes)
-
