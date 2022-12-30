@@ -160,8 +160,6 @@ def iteration(num_iter,ite,qf,query_path,k,test,fix,fout,fixedout,database,thres
         line_number = exception_traceback.tb_lineno
         print(line_number)
         print(sys.exc_info()) #to help debug
-        print(jf.MerDNA(seq[j:k+j]).get_canonical())
-        print(seq[j:k+j])
         sys.exit(1)
 
 
@@ -258,13 +256,13 @@ def fixing_sid(seq,to_be_fixed,k,threshold,qf,num_below_thres_kmers,good_before,
             good_k_mer_after = seq[good_after:good_after+k] 
             fixed_seq = base_extension(len(to_be_fixed),qf,k,good_kmer_before,good_k_mer_after,threshold)
             if fixed_seq != None:
-                seq = seq[:good_before+1]+fixed_seq+seq[good_after:]
                 fixed_ind = []
                 fixed_base = []
                 original = []
                 difference = pairwise2.align.globalms(fixed_seq,seq[good_before+1:good_after],0,-1,-1,-1)[0] #penalize subs and gaps equally
                 fixed_seq_rep = difference[0]
                 original_rep = difference[1]
+                seq = seq[:good_before+1]+fixed_seq+seq[good_after:]
                 for index in range(len(fixed_seq_rep)):
                     ori=original_rep[index]
                     changed = fixed_seq_rep[index]
