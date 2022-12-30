@@ -262,7 +262,7 @@ def fixing_sid(seq,to_be_fixed,k,threshold,qf,num_below_thres_kmers,good_before,
                 fixed_ind = []
                 fixed_base = []
                 original = []
-                difference = pairwise2.align.globalms(fixed_seq, to_be_fixed,0,-1,-1,-1)[0] #penalize subs and gaps equally
+                difference = pairwise2.align.globalms(fixed_seq,to_be_fixed,0,-1,-1,-1)[0] #penalize subs and gaps equally
                 fixed_seq_rep = difference[0]
                 to_be_fixed_rep = difference[1]
                 for index in range(len(fixed_seq_rep)):
@@ -478,7 +478,8 @@ def fix_same_base_insertion(seq_to_be_fixed,k,threshold,qf,num_below_thres_kmers
 
 def base_extension(seq_to_be_fixed,qf,k,good_kmer_before,good_k_mer_after,threshold):
     if len(good_kmer_before) < k:
-        raise Exception("Path not long enough") #remove this later                                                                                                                            
+        print("Error: Path not long enough")
+        return None
     bases = ["A", "C", "G", "T"]
     paths = []  # array of all possible extensions                                                                                                                                            
     #K+L-1-2(K-1) = L-K+1 deleted                                                                                                                                                             
@@ -496,7 +497,8 @@ def base_extension(seq_to_be_fixed,qf,k,good_kmer_before,good_k_mer_after,thresh
         for p in range(last_path+1):
             if not paths[p]:
                 continue
-            km1 = (start_km1 + paths[p])[-k+1:]  # get the k-1 bases off the end                                                                                                              
+            curr_path = paths[p]
+            km1 = (start_km1 + curr_path)[-k+1:]  # get the k-1 bases off the end                                                                                                              
             path_ext_count = 0  # this becomes 1 if we find an extension, and if no extension, then we delete the path                                                                        
             for j in range(4):  # try to extend                                                       
                 score = qf[jf.MerDNA(km1 + bases[j]).get_canonical()]
@@ -509,14 +511,15 @@ def base_extension(seq_to_be_fixed,qf,k,good_kmer_before,good_k_mer_after,thresh
                                 found_good_path = False
                                 break
                         if found_good_path:
-                            return paths[p][1:]
+                            return curr_path[1:]+bases[j]
+                            
 
                     #not a good path YET                                                                                                                                                      
                     if path_ext_count == 0:  # first extension -- extend the current path                                                                                                     
                         paths[p] += bases[j]
                         path_ext_count = 1
                     else:  # another extension -- add a new path                                                                                                                              
-                        paths.append(paths[p][:-1] + bases[j])
+                        paths.append(curr_path + bases[j])
             if path_ext_count == 0:
                 paths[p] = ""  # no extensions, kill this path 
     return None
