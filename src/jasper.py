@@ -5,7 +5,8 @@ import os
 import argparse
 import math
 import csv
-import difflib
+from Bio import pairwise2
+from Bio.pairwise2 import format_alignment
 import dna_jellyfish as jf
 #import textwrap
 
@@ -261,15 +262,26 @@ def fixing_sid(seq,to_be_fixed,k,threshold,qf,num_below_thres_kmers,good_before,
                 fixed_ind = []
                 fixed_base = []
                 original = []
-                for index, s in enumerate(difflib.ndiff(fixed_seq,to_be_fixed)):
-                    if s[0]=='-': #fixed a deletion
+                difference = pairwise2.align.globalms(fixed_seq, to_be_fixed,0,-1,-1,-1)[0] #penalize subs and gaps equally
+                fixed_seq_rep = difference[0]
+                to_be_fixed_rep = difference[1]
+                for index in range(len(fixed_seq_rep)):
+                    ori=to_be_fixed_rep[index]
+                    changed = fixed_seq_rep[index]
+                    if changed == ori:
+                        continue
+                    elif changed == "-": #fixed an insertion
+                        fixed_base.append('-')
+                        original.append("i"+ori)
+                        fixed_ind.append(index+good_before+1)
+                    elif to_be_fixed_rep[index] == "-": #fixed a deletion
                         original.append("d-")
                         fixed_ind.append(index+(good_before+1))
-                        fixed_base.append(s[-1])
-                    elif s[0]=='+': #fixed an insertion
-                        fixed_base.append('-')
-                        original.append("i"+s[-1])
-                        fixed_ind.append(index+good_before+1)
+                        fixed_base.append(changed)
+                    else: #fixed a snp
+                        original.append("s"+ori)
+                        fixed_base.append(changed)
+                        fixed_ind.append(index+(good_before+1))
                         
                         
         return seq,fixed_base, original, fixed_ind
@@ -478,6 +490,7 @@ def base_extension(seq_to_be_fixed,qf,k,good_kmer_before,good_k_mer_after,thresh
     right_end = good_k_mer_after[:-1]
     for i in range(1,1+max_ext):
         paths = [l for l in paths if len(l) > 0]
+        print(len(paths))
         if len(paths) > 5000: #may change later
             return None
         last_path = len(paths) - 1  # since the number of paths will be changing we need to record this                                                                                       
