@@ -9,18 +9,11 @@ import difflib
 import dna_jellyfish as jf
 #import textwrap
 
-def main(contigs,query_path,k,test,fix,fout,fixedout,database,thre,num_iter):
+def main(contigs,query_path,k,test,fix,fout,fixedout,db,thre,num_iter):
     try:
-        db = database
-        if ((contigs == None and database == None) or (contigs != None and database != None)): 
-            sys.stderr.write("Wrong arguments. One and only one between the contigs and database argument should be given. ")
-            return
-        
-        threshold,db = jellyfish(contigs, database, k,thre)        
-
         qf  = jf.QueryMerFile(db)
         for ite in range(num_iter+1): #num_iter rounds of fixing plus one more round to find the final q value
-            query_path = iteration(num_iter,ite,qf,query_path,k,test,fix,fout,fixedout,database,threshold)
+            query_path = iteration(num_iter,ite,qf,query_path,k,test,fix,fout,fixedout,db,thre)
     except:
          exception_type, exception_object, exception_traceback = sys.exc_info()
          line_number = exception_traceback.tb_lineno
@@ -181,32 +174,6 @@ def split_output(seq, num_per_line=60): #make a new line after num_per_line base
     return output
 
          
-
-def jellyfish(contigs,database,k,thre):
-    count = math.inf
-    threshold = 0
-    if database != None:
-        db_name = database
-        base_name = os.path.splitext(db_name)[0]
-    if contigs != None:
-        db_name = os.path.splitext(os.path.basename(contigs[0]))[0]+".jf"
-        base_name = os.path.splitext(db_name)[0]
-        contigs = ' '.join(contig_file for contig_file in contigs)
-        os.system("jellyfish count -s 300000000 -t 32 -m {} -C -o {} {}".format(k,db_name,contigs))
-    if thre != None:
-        return thre,db_name
-    else:
-        os.system("jellyfish histo -t 32 {}> {}".format(db_name,base_name+".csv"))
-        with open(base_name+".csv",'r') as histo:
-            csvreader = csv.reader(histo,delimiter=' ')
-            for row in csvreader:
-                if count >= int(row[-1]):
-                    count = int(row[-1])
-                    threshold = int(int(row[0])/2)
-                else: #found local min
-                    return threshold,db_name
-                
-
 
 
 def fixing_sid(seq,to_be_fixed,k,threshold,qf,num_below_thres_kmers,good_before,good_after): #fix sub and indel
