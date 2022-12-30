@@ -274,7 +274,7 @@ def fixing_sid(seq,to_be_fixed,k,threshold,qf,num_below_thres_kmers,good_before,
                         fixed_base.append('-')
                         original.append("i"+ori)
                         fixed_ind.append(index+good_before+1)
-                    elif to_be_fixed_rep[index] == "-": #fixed a deletion
+                    elif ori == "-": #fixed a deletion
                         original.append("d-")
                         fixed_ind.append(index+(good_before+1))
                         fixed_base.append(changed)
