@@ -256,17 +256,17 @@ def fixing_sid(seq,to_be_fixed,k,threshold,qf,num_below_thres_kmers,good_before,
         elif num_below_thres_kmers > k: #two or more nearby errors.
             good_kmer_before = seq[good_before-k+1:good_before+1] 
             good_k_mer_after = seq[good_after:good_after+k] 
-            fixed_seq = base_extension(to_be_fixed,qf,k,good_kmer_before,good_k_mer_after,threshold)
+            fixed_seq = base_extension(len(to_be_fixed),qf,k,good_kmer_before,good_k_mer_after,threshold)
             if fixed_seq != None:
                 seq = seq[:good_before+1]+fixed_seq+seq[good_after:]
                 fixed_ind = []
                 fixed_base = []
                 original = []
-                difference = pairwise2.align.globalms(fixed_seq,to_be_fixed,0,-1,-1,-1)[0] #penalize subs and gaps equally
+                difference = pairwise2.align.globalms(fixed_seq,seq[good_before+1:good_after],0,-1,-1,-1)[0] #penalize subs and gaps equally
                 fixed_seq_rep = difference[0]
-                to_be_fixed_rep = difference[1]
+                original_rep = difference[1]
                 for index in range(len(fixed_seq_rep)):
-                    ori=to_be_fixed_rep[index]
+                    ori=original_rep[index]
                     changed = fixed_seq_rep[index]
                     if changed == ori:
                         continue
@@ -476,14 +476,14 @@ def fix_same_base_insertion(seq_to_be_fixed,k,threshold,qf,num_below_thres_kmers
     return None
 
 
-def base_extension(seq_to_be_fixed,qf,k,good_kmer_before,good_k_mer_after,threshold):
+def base_extension(len_seq_to_be_fixed,qf,k,good_kmer_before,good_k_mer_after,threshold):
     if len(good_kmer_before) < k:
         print("Error: Path not long enough")
         return None
     bases = ["A", "C", "G", "T"]
     paths = []  # array of all possible extensions                                                                                                                                            
     #K+L-1-2(K-1) = L-K+1 deleted                                                                                                                                                             
-    L = len(seq_to_be_fixed)+1-k #number of bad kmers                                                                                                                                         
+    L = len_seq_to_be_fixed+1-k #number of bad kmers                                                                                                                                         
     max_ext = L-k+5 #allow insertion of 4 more bases than before                                                                                                                              
     found_good_path = False
     start_km1 = good_kmer_before[:-1]   # store the k-1 bases in a variable no need to carry these around                                                                                     
