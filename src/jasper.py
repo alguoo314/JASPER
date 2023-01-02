@@ -481,15 +481,15 @@ def base_extension(len_seq_to_be_fixed,qf,k,good_kmer_before,good_k_mer_after,th
     bases = ["A", "C", "G", "T"]
     paths = []  # array of all possible extensions                                                                                                                                            
     #K+L-1-2(K-1) = L-K+1 deleted                                                                                                                                                             
-    L = len_seq_to_be_fixed+1-k #number of bad kmers                                                                                                                                         
-    max_ext = L-k+5 #allow insertion of 4 more bases than before                                                                                                                              
+    L = len_seq_to_be_fixed+1-k #number of bad kmers                                                                                                            #EDIT allow 6 more bases                             
+    max_ext = L-k+7 #allow insertion of 4 more bases than before                                                                                                                              
     found_good_path = False
     start_km1 = good_kmer_before[:-1]   # store the k-1 bases in a variable no need to carry these around                                                                                     
     paths.append(good_kmer_before[-1])  # the last base of the initial k-mer makes the first path                                                                                             
     right_end = good_k_mer_after[:-1]
     for i in range(1,1+max_ext):
         paths = [l for l in paths if len(l) > 0]
-        if len(paths) > 5000: #may change later
+        if len(paths) >15000: #may change later
             return None
         last_path = len(paths) - 1  # since the number of paths will be changing we need to record this                                                                                       
         for p in range(last_path+1):
@@ -500,8 +500,8 @@ def base_extension(len_seq_to_be_fixed,qf,k,good_kmer_before,good_k_mer_after,th
             path_ext_count = 0  # this becomes 1 if we find an extension, and if no extension, then we delete the path                                                                        
             for j in range(4):  # try to extend                                                       
                 score = qf[jf.MerDNA(km1 + bases[j]).get_canonical()]
-                if score >= threshold:
-                    if i >= max_ext-8: #the path is <4 bases short of deleted part. Start checking if it is finished.                                                                         
+                if score >= threshold: #EDIT: -8 becomes -10
+                    if i >= max_ext-10: #the path is <4 bases short of deleted part. Start checking if it is finished.                                       
                         found_good_path = True
                         right_half_connected = km1+ bases[j]+right_end
                         for n in range(1,len(right_half_connected)-k+1): #check the remaining kmers               
