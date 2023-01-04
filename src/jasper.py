@@ -315,11 +315,7 @@ def fixdiploid(seq_to_be_fixed,k,threshold,qf,full_seq,good_before,good_after):
                 trial = seq_to_be_fixed[:len(seq_to_be_fixed)-k]+x+seq_to_be_fixed[len(seq_to_be_fixed)-k+1:k-1]+y+seq_to_be_fixed[k:]
                 fixed = True
                 check=bases_before+trial+base_after
-                for i in  range(len(check)-k+1):
-                    if qf[jf.MerDNA(check[i:k+i]).get_canonical()] < threshold:
-                        fixed  = False
-                        break
-                if fixed == True:
+                if check_sequence(trial,qf,k,threshold):
                     left = x
                     right = y
                     if x == left_bad:
@@ -351,12 +347,7 @@ def fix_k_case_sub(seq_to_be_fixed,k,threshold,qf): #when number of conseuctive 
             continue
         else:
             trial = trial[:k-1]+b+trial[k:]
-            fixed = True
-            for i in range(0,len(trial)-k+1,2):
-                if qf[jf.MerDNA(trial[i:k+i]).get_canonical()] < threshold:
-                    fixed  = False
-                    break
-            if fixed == True:
+            if check_sequence(trial,qf,k,threshold):
                 return b
     return None
 
@@ -393,12 +384,7 @@ def fix_insert(seq_to_be_fixed,k,threshold,qf):
     ind_to_be_removed = k-1
     base_to_be_removed = seq_to_be_fixed[ind_to_be_removed]
     seq_to_be_fixed = seq_to_be_fixed[:ind_to_be_removed] + seq_to_be_fixed[ind_to_be_removed+1:]
-    fixed = True
-    for i in range(0,len(seq_to_be_fixed)-k+1,2):
-        if qf[jf.MerDNA(seq_to_be_fixed[i:k+i]).get_canonical()] < threshold:
-            fixed  = False
-            break
-    if fixed == True:
+    if check_sequence(seq_to_be_fixed,qf,k,threshold):
             return base_to_be_removed
     return None
 
@@ -407,11 +393,7 @@ def fix_insert(seq_to_be_fixed,k,threshold,qf):
 def fix_del(seq_to_be_fixed,k,threshold,qf): 
     for alt in 'ATCG':
         trial = seq_to_be_fixed[:k-1]+alt+seq_to_be_fixed[k-1:]
-        fixed = True
-        for i in  range(0,len(trial)-k+1,2):
-            if qf[jf.MerDNA(trial[i:k+i]).get_canonical()] < threshold:
-                fixed  = False
-        if fixed == True:
+        if check_sequence(trial,qf,k,threshold):
             return alt
     return None
 
@@ -448,12 +430,7 @@ def fix_same_base_del(seq_to_be_fixed,k,threshold,qf,num_below_thres_kmers):
     print("Trying to insert a single base before the first good k-mer")
     for alt in 'ATCG':
         trial = seq_to_be_fixed[:k-2]+alt+seq_to_be_fixed[k-2:]
-        #print("Trying "+trial)
-        fixed = True
-        for i in  range(0,len(trial)-k+1,2):
-            if qf[jf.MerDNA(trial[i:k+i]).get_canonical()] < threshold:
-                fixed  = False
-        if fixed == True:
+        if check_sequence(trial,qf,k,threshold):
             print("Success2 " + alt)
             return alt
     return None
@@ -494,12 +471,7 @@ def fix_same_base_insertion(seq_to_be_fixed,k,threshold,qf,num_below_thres_kmers
     print("Let's try to delete a single base in the middle of the sequence")
     for i in range(5,num_below_thres_kmers):
         trial = seq_to_be_fixed[:i]+seq_to_be_fixed[i+1:]
-        #print("Trying "+trial)
-        fixed = True
-        for i in  range(0,len(trial)-k+1,2):
-            if qf[jf.MerDNA(trial[i:k+i]).get_canonical()] < threshold:
-                fixed  = False
-        if fixed == True:
+        if check_sequence(trial,qf,k,threshold):
             print("Success2 " + trial)
             seq_to_be_fixed=trial
             return None #this needs to be fixed, we need to be able to return the fixed sequence
@@ -537,13 +509,7 @@ def base_extension(len_seq_to_be_fixed,qf,k,good_kmer_before,good_k_mer_after,th
                            if last_bases.find(good_k_mer_after[0:min_overlap]) > -1:
                                 path_connected=(start_km1+paths[p]+bases[j]+good_k_mer_after[-(k-min_overlap):])[-(2*k-1):];
                                 print("Candidate path "+ path_connected + " target " + good_k_mer_after + " iteration " +str(i))
-                                found_good_path = True
-                                for n in range(0,len(path_connected)-k-1,2): #check the remaining kmers
-                                    #print("Checking count of " + path_connected[n:k+n] + " " + str(qf[jf.MerDNA(path_connected[n:k+n]).get_canonical()]));
-                                    if qf[jf.MerDNA(path_connected[n:k+n]).get_canonical()] < threshold:
-                                      found_good_path = False
-                                      break
-                                if found_good_path:
+                                if check_sequence(path_connected,qf,k,threshold):
                                     if i == min_overlap:
                                         print("Success path "+ start_km1 + paths[p]+ bases[j] + " target " + good_k_mer_after + " patch empty ")
                                         return None
@@ -558,6 +524,14 @@ def base_extension(len_seq_to_be_fixed,qf,k,good_kmer_before,good_k_mer_after,th
                 if path_ext_count == 0:
                     paths[p] = ""  # no extensions, kill this path 
     return None
+
+def check_sequence(trial,qf,k,threshold):
+    fixed = True
+    for i in  range(0,len(trial)-k+1,2):
+        if qf[jf.MerDNA(trial[i:k+i]).get_canonical()] < threshold:
+            fixed  = False
+            break
+    return fixed
 
 
 def parse_fasta(query_file):
