@@ -345,6 +345,7 @@ def fixdiploid(seq_to_be_fixed,k,threshold,qf,full_seq,good_before,good_after):
 
 def fix_k_case_sub(seq_to_be_fixed,k,threshold,qf): #when number of conseuctive bad kmers is k
     bad_base = seq_to_be_fixed[k-1]
+    print("Trying base substitution of " + bad_base + " in " +seq_to_be_fixed)
     for b in 'ACTG':
         trial = seq_to_be_fixed
         if b == bad_base:
@@ -352,6 +353,7 @@ def fix_k_case_sub(seq_to_be_fixed,k,threshold,qf): #when number of conseuctive 
         else:
             trial = trial[:k-1]+b+trial[k:]
             if check_sequence(trial,qf,k,threshold):
+                print("Success "+ trial);
                 return b
     return None
 
@@ -385,10 +387,12 @@ def fix_nearby_subs(seq_to_be_fixed,k,threshold,qf,num_below_thres_kmers): #a su
                 
 
 def fix_insert(seq_to_be_fixed,k,threshold,qf):
+    print("Trying insertion in " + seq_to_be_fixed)
     ind_to_be_removed = k-1
     base_to_be_removed = seq_to_be_fixed[ind_to_be_removed]
     seq_to_be_fixed = seq_to_be_fixed[:ind_to_be_removed] + seq_to_be_fixed[ind_to_be_removed+1:]
     if check_sequence(seq_to_be_fixed,qf,k,threshold):
+            print("Success "+seq_to_be_fixed)
             return base_to_be_removed
     return None
 
@@ -422,7 +426,7 @@ def fix_same_base_del(seq_to_be_fixed,k,threshold,qf,num_below_thres_kmers):
                 fixed  = False
                 new_bad +=1
         if fixed == True:
-            print("Success1 " + sb*inserted)
+            print("Success1 " + trial)
             return sb*inserted
         if (new_bad >= current_bad):
             inserted = max_insertions
@@ -435,7 +439,7 @@ def fix_same_base_del(seq_to_be_fixed,k,threshold,qf,num_below_thres_kmers):
     for alt in 'ATCG':
         trial = seq_to_be_fixed[:k-2]+alt+seq_to_be_fixed[k-2:]
         if check_sequence(trial,qf,k,threshold):
-            print("Success2 " + alt)
+            print("Success2 " + trial)
             return alt
     return None
 
@@ -465,7 +469,7 @@ def fix_same_base_insertion(seq_to_be_fixed,k,threshold,qf,num_below_thres_kmers
         if (flag == 0):
             break
         if (fixed == True):
-            print("Success1 " + sb*deleted)
+            print("Success1 " + seq_to_be_fixed_local)
             return sb*deleted
         if (new_bad >= current_bad):
             break
