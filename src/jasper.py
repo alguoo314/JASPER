@@ -182,49 +182,51 @@ def fixing_sid(seq,to_be_fixed,k,threshold,qf,num_below_thres_kmers,good_before,
         fixed_ind = None
 
         if num_below_thres_kmers == k: #substitution or insertion
-            b = fix_k_case_sub(to_be_fixed,k,threshold,qf)
+            b,fixed_subseq = fix_k_case_sub(to_be_fixed,k,threshold,qf)
             if b !=  None:
+                seq = seq[:max(0,good_before-k+2)]+fixed_subseq+seq[good_after+k-1:]
                 original = "s"+seq[good_after-1]
-                seq  = seq[:good_after-1] + b + seq[good_after:]
                 fixed_base = b
                 fixed_ind = [good_after-1]
             else:
-                b = fix_insert(to_be_fixed,k,threshold,qf)
+                b,fixed_subseq = fix_insert(to_be_fixed,k,threshold,qf)
                 if b != None:
+                    seq = seq[:max(0,good_before-k+2)]+fixed_subseq+seq[good_after+k-1:]
                     original = "i"+seq[good_after-1]
-                    seq = seq[:good_after-1] + seq[good_after:]
                     fixed_base = '-'
                     fixed_ind = [good_after-2]
                                     
         elif num_below_thres_kmers == k-1: #deletion or same base insertion or substitution
-           removed_base = fix_del(to_be_fixed,k,threshold,qf)
+           removed_base,fixed_subseq = fix_del(to_be_fixed,k,threshold,qf)
            if removed_base != None: #deletion of a base
                original = "d-"
                fixed_ind = [good_after]
-               seq = seq[:good_after]+removed_base+seq[good_after:]
+               seq = seq[:max(0,good_before-k+2)]+fixed_subseq+seq[good_after+k-1:]
                fixed_base = removed_base 
-           elif fix_same_base_insertion(to_be_fixed,k,threshold,qf,num_below_thres_kmers)!= None:
-               original = "i"+seq[good_before]
-               seq = seq[:good_before] + seq[good_before+1:]
-               fixed_base = "-"
-               fixed_ind = [good_before] #insertion after this index
            else:
-                left,right,l_or_r =  fixdiploid(to_be_fixed,k,threshold,qf,seq,good_before,good_after) #diploidy of two adjacent bases                                
-                if l_or_r !=  None:
-                    if l_or_r == "s": #lefting base is changed                                                                                                        
-                        original = "s"+seq[good_after-1]
-                        fixed_base = str(left)
-                        fixed_ind = [good_after-1]
-                    else:#the righting base is changed                                                                                                                
-                        original = "s"+seq[good_before+1]
-                        fixed_base = str(right)
-                        fixed_ind = [good_before+1]
-                    seq = seq[:good_after-1]+left+seq[good_after:good_before+1] + right + seq[good_before+2:]
+               inserted_base,fixed_subseq = fix_same_base_insertion(to_be_fixed,k,threshold,qf,num_below_thres_kmers)
+               if inserted_base != None:
+                   original = "i"+inserted_base
+                   fixed_base = "-"
+                   seq = seq[:max(0,good_before-k+2)]+fixed_subseq+seq[good_after+k-1:]
+                   fixed_ind = [good_before] #insertion after this index
+               else:
+                   left,right,l_or_r,fixed_subseq =  fixdiploid(to_be_fixed,k,threshold,qf,seq,good_before,good_after) #diploidy of two adjacent bases                           
+                   if l_or_r !=  None:
+                       seq = seq[:max(0,good_before-k+2)]+fixed_subseq+seq[good_after+k-1:]
+                       if l_or_r == "s": #lefting base is changed                                                                                                        
+                           original = "s"+seq[good_after-1]
+                           fixed_base = str(left)
+                           fixed_ind = [good_after-1]
+                       else:#the righting base is changed                                                                                                                
+                           original = "s"+seq[good_before+1]
+                           fixed_base = str(right)
+                           fixed_ind = [good_before+1]
                     
 
                   
         elif num_below_thres_kmers < k-1 and num_below_thres_kmers > 1 and len(to_be_fixed)>=k:#skip the good_before = -1 (ie first kmer is bad) case.
-            left,right,l_or_r =  fixdiploid(to_be_fixed,k,threshold,qf,seq,good_before,good_after) #diploidy
+            left,right,l_or_r,fixed_subseq =  fixdiploid(to_be_fixed,k,threshold,qf,seq,good_before,good_after) #diploidy
             if l_or_r !=  None: 
                 if l_or_r == "s": #lefting base is changed
                     original = "s"+seq[good_after-1]
@@ -234,21 +236,21 @@ def fixing_sid(seq,to_be_fixed,k,threshold,qf,num_below_thres_kmers,good_before,
                     original = "s"+seq[good_before+1]
                     fixed_base = str(right)
                     fixed_ind = [good_before+1]
-                seq = seq[:good_after-1]+left+seq[good_after:good_before+1] + right + seq[good_before+2:]
+                seq = seq[:max(0,good_before-k+2)]+fixed_subseq+seq[good_after+k-1:]
                 
             else: 
-                inserted_base = fix_same_base_insertion(to_be_fixed,k,threshold,qf,num_below_thres_kmers)
+                inserted_base,fixed_subseq = fix_same_base_insertion(to_be_fixed,k,threshold,qf,num_below_thres_kmers)
                 if inserted_base != None:
                     original = "i"+inserted_base
-                    seq = seq[:good_before] + seq[good_before+len(inserted_base):]     
+                    seq = seq[:max(0,good_before-k+2)]+fixed_subseq+seq[good_after+k-1:]
                     fixed_base = "-"
                     fixed_ind = [good_before] #insertion after this index
                 else:
-                    removed_base = fix_same_base_del(to_be_fixed,k,threshold,qf,num_below_thres_kmers)
+                    removed_base,fixed_subseq = fix_same_base_del(to_be_fixed,k,threshold,qf,num_below_thres_kmers)
                     if removed_base != None: #deletion of a base
                         original = "d-"
                         fixed_ind = [good_before]
-                        seq = seq[:good_before]+removed_base+seq[good_before:]
+                        seq = seq[:max(0,good_before-k+2)]+fixed_subseq+seq[good_after+k-1:]
                         fixed_base = removed_base
 
         elif num_below_thres_kmers > k: #two or more nearby errors.
@@ -331,9 +333,8 @@ def fixdiploid(seq_to_be_fixed,k,threshold,qf,full_seq,good_before,good_after):
                     else: #both changed not acceptable
                         continue
                         
-     
-                    return(left,right,l_or_r)
-        return left,right,None
+                    return(left,right,l_or_r,trial)
+        return None,None,None,None
     except:
          exception_type, exception_object, exception_traceback = sys.exc_info()
          line_number = exception_traceback.tb_lineno
@@ -352,36 +353,10 @@ def fix_k_case_sub(seq_to_be_fixed,k,threshold,qf): #when number of conseuctive 
         else:
             trial = trial[:k-1]+b+trial[k:]
             if check_sequence(trial,qf,k,threshold):
-                return b
-    return None
-
+                return b,trial
+    return None,None
 
     
-def fix_nearby_subs(seq_to_be_fixed,k,threshold,qf,num_below_thres_kmers): #a substituion nearby another error
-    for x in 'ACTG':
-        if x == seq_to_be_fixed[k-1]:
-            continue
-        for y in 'ACTG':
-            fixed = False
-            if y == seq_to_be_fixed[len(seq_to_be_fixed)-k]:
-                continue
-            else:
-                trial = seq_to_be_fixed[:k-1]+x+seq_to_be_fixed[k:len(seq_to_be_fixed)-k]+y+seq_to_be_fixed[len(seq_to_be_fixed)-k+1:]
-                fixed = True
-                for i in range(0,len(trial)-k+1,2):
-                    if qf[jf.MerDNA(trial[i:k+i]).get_canonical()] < threshold:
-                        fixed  = False
-                        break
-                if fixed == True:
-                    return x,y
-                else:
-                    l = len(seq_to_be_fixed)
-                    if qf[jf.MerDNA(seq_to_be_fixed[:k-1]+x).get_canonical()]  >= threshold and qf[jf.MerDNA(seq_to_be_fixed[1:k-1]+x+seq_to_be_fixed[k]).get_canonical()] and qf[jf.MerDNA(seq_to_be_fixed[2:k-1]+x+seq_to_be_fixed[k:k+2]).get_canonical()] >= threshold: # >3 fixed
-                        return x,None
-                    elif qf[jf.MerDNA(seq_to_be_fixed[l-k-2:l-k]+y+seq_to_be_fixed[l-k+1:l-2]).get_canonical()] >= threshold and  qf[jf.MerDNA(seq_to_be_fixed[l-k-1]+y+seq_to_be_fixed[l-k+1:l-1]).get_canonical()]  >= threshold and qf[jf.MerDNA(y+seq_to_be_fixed[l-k+1:]).get_canonical()] >= threshold:
-                       return None,y
-    return None, None
-               
                 
 
 def fix_insert(seq_to_be_fixed,k,threshold,qf):
@@ -389,8 +364,8 @@ def fix_insert(seq_to_be_fixed,k,threshold,qf):
     base_to_be_removed = seq_to_be_fixed[ind_to_be_removed]
     seq_to_be_fixed = seq_to_be_fixed[:ind_to_be_removed] + seq_to_be_fixed[ind_to_be_removed+1:]
     if check_sequence(seq_to_be_fixed,qf,k,threshold):
-            return base_to_be_removed
-    return None
+            return base_to_be_removed,seq_to_be_fixed
+    return None,None
 
 
 
@@ -398,8 +373,8 @@ def fix_del(seq_to_be_fixed,k,threshold,qf):
     for alt in 'ATCG':
         trial = seq_to_be_fixed[:k-1]+alt+seq_to_be_fixed[k-1:]
         if check_sequence(trial,qf,k,threshold):
-            return alt
-    return None
+            return alt,trial
+    return None,None
 
 def fix_same_base_del(seq_to_be_fixed,k,threshold,qf,num_below_thres_kmers):
     print("Trying same base deletion in " + seq_to_be_fixed)
@@ -423,7 +398,7 @@ def fix_same_base_del(seq_to_be_fixed,k,threshold,qf,num_below_thres_kmers):
                 new_bad +=1
         if fixed == True:
             print("Success1 " + sb*inserted)
-            return sb*inserted
+            return sb*inserted,trial
         if (new_bad >= current_bad):
             inserted = max_insertions
             break
@@ -436,8 +411,8 @@ def fix_same_base_del(seq_to_be_fixed,k,threshold,qf,num_below_thres_kmers):
         trial = seq_to_be_fixed[:k-2]+alt+seq_to_be_fixed[k-2:]
         if check_sequence(trial,qf,k,threshold):
             print("Success2 " + alt)
-            return alt
-    return None
+            return alt,trial 
+    return None,None
 
 
 def fix_same_base_insertion(seq_to_be_fixed,k,threshold,qf,num_below_thres_kmers):
@@ -466,7 +441,7 @@ def fix_same_base_insertion(seq_to_be_fixed,k,threshold,qf,num_below_thres_kmers
             break
         if (fixed == True):
             print("Success1 " + sb*deleted)
-            return sb*deleted
+            return sb*deleted,seq_to_be_fixed_local
         if (new_bad >= current_bad):
             break
         else: #delete one more base
@@ -477,9 +452,8 @@ def fix_same_base_insertion(seq_to_be_fixed,k,threshold,qf,num_below_thres_kmers
         trial = seq_to_be_fixed[:i]+seq_to_be_fixed[i+1:]
         if check_sequence(trial,qf,k,threshold):
             print("Success2 " + trial)
-            seq_to_be_fixed=trial
-            return None #this needs to be fixed, we need to be able to return the fixed sequence
-    return None
+            return seq_to_be_fixed[i],trial #Need further modification later because the index for the deleted base is different from case 1
+    return None,None
 
 
 def base_extension(len_seq_to_be_fixed,qf,k,good_kmer_before,good_k_mer_after,threshold):
