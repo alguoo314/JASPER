@@ -131,7 +131,7 @@ if [ -z ${JF_DB+x} ];then
 		error_exit "The reads file  $filename does not exist. Please supply a series of valid reads files separated by space and wrapped in one pair of quotation marks."
 	     fi
 	done
-        JF_DB="mer_counts.jf"
+        JF_DB="mer_counts$KMER.jf"
         if [ -s "mer_counts.jf" ];then
           log "Using existing jellyfish database mer_counts.jf"
         else
