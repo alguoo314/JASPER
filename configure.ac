@@ -1,7 +1,7 @@
 AC_PREREQ([2.63])
 # TODO: change name (test), version (1.0.0) and contact email address
 # (me@me.com)
-AC_INIT([jasper], [1.0.0], [jguo54@jhu.edu])
+AC_INIT([jasper], [1.0.1], [jguo54@jhu.edu])
 AC_CONFIG_AUX_DIR([build-aux])
 AM_SILENT_RULES([yes])
 # TODO: test.hpp may need to change to actual file
