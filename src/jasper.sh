@@ -132,10 +132,10 @@ if [ -z ${JF_DB+x} ];then
 	     fi
 	done
         JF_DB="mer_counts$KMER.jf"
-        if [ -s "mer_counts.jf" ];then
-          log "Using existing jellyfish database mer_counts.jf"
+        if [ -s $JF_DB ];then
+          log "Using existing jellyfish database $JF_DB"
         else
-          log "Creating jellyfish database mer_counts.jf"
+          log "Creating jellyfish database $JF_DB"
           zcat -f $READS | jellyfish count -C -s $JF_SIZE -m $KMER -o $JF_DB -t $NUM_THREADS /dev/stdin
         fi
     else
