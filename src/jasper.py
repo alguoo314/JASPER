@@ -315,7 +315,11 @@ def fixdiploid(seq_to_be_fixed,k,threshold,qf,full_seq,good_before,good_after):
                 trial = seq_to_be_fixed[:len(seq_to_be_fixed)-k]+x+seq_to_be_fixed[len(seq_to_be_fixed)-k+1:k-1]+y+seq_to_be_fixed[k:]
                 fixed = True
                 check=bases_before+trial+base_after
-                if check_sequence(trial,qf,k,threshold):
+                for i in  range(len(check)-k+1):
+                    if qf[jf.MerDNA(check[i:k+i]).get_canonical()] < threshold:
+                        fixed  = False
+                        break
+                if fixed == True:
                     left = x
                     right = y
                     if x == left_bad:
