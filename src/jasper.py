@@ -413,6 +413,7 @@ def fix_same_base_del(seq_to_be_fixed,k,threshold,qf,num_below_thres_kmers):
     print("Trying to insert a single base before the first good k-mer")
     for alt in 'ATCG':
         trial = seq_to_be_fixed[:k-2]+alt+seq_to_be_fixed[k-2:]
+        #print("trying " +trial)
         if check_sequence(trial,qf,k,threshold):
             print("Success2 " + trial)
             return alt,trial 
@@ -451,8 +452,9 @@ def fix_same_base_insertion(seq_to_be_fixed,k,threshold,qf,num_below_thres_kmers
             current_bad = new_bad
             continue
     print("Let's try to delete a single base in the middle of the sequence")
-    for i in range(5,num_below_thres_kmers):
+    for i in range(5,len(seq_to_be_fixed)-5):
         trial = seq_to_be_fixed[:i]+seq_to_be_fixed[i+1:]
+        #print("trying " +trial)
         if check_sequence(trial,qf,k,threshold):
             print("Success2 " + trial)
             return seq_to_be_fixed[i],trial #Need further modification later because the index for the deleted base is different from case 1
