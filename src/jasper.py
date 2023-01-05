@@ -463,38 +463,54 @@ def base_extension(len_seq_to_be_fixed,qf,k,good_kmer_before,good_k_mer_after,th
     bases = ["A", "C", "G", "T"]
     start_km1 = good_kmer_before[:-1]   # store the k-1 bases in a variable no need to carry these around
     min_overlap = 5 # must be less than k
-    ext_threshold=threshold
+    ext_threshold=int(threshold/2)
+    ext_threshold_local=ext_threshold
     for slack in range(2,8,2):
         paths = [] # array of all possible extensions
-        max_ext = len_seq_to_be_fixed - 2*k + min_overlap + slack
+        max_ext = int((len_seq_to_be_fixed - 2*k)*1.2) + min_overlap + slack
         min_patch_len = len_seq_to_be_fixed - 2*k - slack                                                                                     
         paths.append(good_kmer_before[-1])  # the last base of the initial k-mer makes the first path 
         print("Starting fixing "+str(len_seq_to_be_fixed) + " " + str(min_patch_len) +" "+good_kmer_before+ " " +good_k_mer_after)
         for i in range(1,max_ext):
             paths = [l for l in paths if len(l) > 0]
             if len(paths) > 5000: #may change later
+                print("Too many paths")
                 return None
             last_path = len(paths)  # since the number of paths will be changing we need to record this                                                                                       
             for p in range(last_path):
                 if paths[p]=="":
                     continue
-                km1 = (start_km1 + paths[p])[-k+1:]  # get the k-1 bases off the end                                                                                                             
-                path_ext_count = 0  # this becomes 1 if we find an extension, and if no extension, then we delete the path                                                                        
+                km1 = (start_km1 + paths[p])[-k+1:]  # get the k-1 bases off the end                                                                         
+                path_ext_count = 0  # this becomes 1 if we find an extension, and if no extension, then we delete the path              
+                max_score = 2
+                for j in range(4):
+                    score=qf[jf.MerDNA(km1 + bases[j]).get_canonical()]
+                    if score > max_score:
+                        max_score = score
+                if max_score >= ext_threshold:
+                    ext_threshold_local=ext_threshold
+                else:
+                    ext_threshold_local=max_score
                 for j in range(4):  # try to extend                                                       
                     score = qf[jf.MerDNA(km1 + bases[j]).get_canonical()]
-                    if score >= ext_threshold:
+                    if score >= ext_threshold_local:
                         last_bases=km1 + bases[j]
                         if i >= min_overlap and i >= min_patch_len:
-                           if last_bases.find(good_k_mer_after[0:min_overlap]) > -1:
-                                path_connected=(start_km1+paths[p]+bases[j]+good_k_mer_after[-(k-min_overlap):])[-(2*k-1):];
+                            if last_bases.find(good_k_mer_after[0:min_overlap]) == k-min_overlap:
+                                if path_ext_count: #check if this is the first extension
+                                    path_connected=(start_km1 + (paths[p])[:-1] + bases[j] + good_k_mer_after[-(k-min_overlap):])[-(2*k-1):];
+                                    return_path=((paths[p])[:-1] + bases[j])[1:-min_overlap]
+                                else:
+                                    path_connected=(start_km1 + paths[p] + bases[j] + good_k_mer_after[-(k-min_overlap):])[-(2*k-1):];
+                                    return_path=(paths[p] + bases[j])[1:-min_overlap]
                                 print("Candidate path "+ path_connected + " target " + good_k_mer_after + " iteration " +str(i))
-                                if check_sequence(path_connected,qf,k,threshold):
+                                if check_sequence(path_connected,qf,k,ext_threshold_local):
                                     if i == min_overlap:
                                         print("Success path "+ start_km1 + paths[p]+ bases[j] + " target " + good_k_mer_after + " patch empty ")
                                         return None
                                     else:
                                         print("Success path "+ start_km1 + paths[p]+ bases[j] + " target " + good_k_mer_after + " patch "+ (paths[p]+bases[j])[1:-min_overlap])
-                                        return (paths[p]+bases[j])[1:-min_overlap]
+                                        return return_path 
                         if path_ext_count == 0:  # first extension -- extend the current path                                                                                 
                              paths[p] += bases[j]
                              path_ext_count = 1
