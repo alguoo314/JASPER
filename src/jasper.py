@@ -293,6 +293,7 @@ def fixing_sid(seq,to_be_fixed,k,threshold,qf,num_below_thres_kmers,good_before,
         sys.exit(1)         
                 
 def fixdiploid(seq_to_be_fixed,k,threshold,qf,full_seq,good_before,good_after):
+    print("Trying diploid fix")
     #for fixing the first base of the last k-mer in L we also need to check the kmers before that contains this base.
     # for fixing the last b of first kmer in L we also need to check if the kmer starting at good_after is good still
     try:
@@ -360,7 +361,7 @@ def fix_k_case_sub(seq_to_be_fixed,k,threshold,qf): #when number of conseuctive 
                 
 
 def fix_insert(seq_to_be_fixed,k,threshold,qf):
-    print("Trying insertion in " + seq_to_be_fixed)
+    print("Trying to fix an insertion in " + seq_to_be_fixed)
     ind_to_be_removed = k-1
     base_to_be_removed = seq_to_be_fixed[ind_to_be_removed]
     seq_to_be_fixed = seq_to_be_fixed[:ind_to_be_removed] + seq_to_be_fixed[ind_to_be_removed+1:]
@@ -371,6 +372,7 @@ def fix_insert(seq_to_be_fixed,k,threshold,qf):
 
 
 def fix_del(seq_to_be_fixed,k,threshold,qf): 
+    print("Trying to fix deletion in " + seq_to_be_fixed + " between " + seq_to_be_fixed[:k-1] + " and " +seq_to_be_fixed[k-1:])
     for alt in 'ATCG':
         trial = seq_to_be_fixed[:k-1]+alt+seq_to_be_fixed[k-1:]
         if check_sequence(trial,qf,k,threshold):
@@ -463,14 +465,14 @@ def base_extension(len_seq_to_be_fixed,qf,k,good_kmer_before,good_k_mer_after,th
     bases = ["A", "C", "G", "T"]
     start_km1 = good_kmer_before[:-1]   # store the k-1 bases in a variable no need to carry these around
     min_overlap = 5 # must be less than k
-    ext_threshold=int(threshold/2)
+    ext_threshold=threshold
     ext_threshold_local=ext_threshold
     for slack in range(2,8,2):
         paths = [] # array of all possible extensions
         max_ext = int((len_seq_to_be_fixed - 2*k)*1.2) + min_overlap + slack
         min_patch_len = len_seq_to_be_fixed - 2*k - slack                                                                                     
         paths.append(good_kmer_before[-1])  # the last base of the initial k-mer makes the first path 
-        print("Starting fixing "+str(len_seq_to_be_fixed) + " " + str(min_patch_len) +" "+good_kmer_before+ " " +good_k_mer_after)
+        print("Looking for a path "+str(len_seq_to_be_fixed) + " " + str(min_patch_len) +" "+good_kmer_before+ " " +good_k_mer_after)
         for i in range(1,max_ext):
             paths = [l for l in paths if len(l) > 0]
             if len(paths) > 5000: #may change later
@@ -504,7 +506,7 @@ def base_extension(len_seq_to_be_fixed,qf,k,good_kmer_before,good_k_mer_after,th
                                     path_connected=(start_km1 + paths[p] + bases[j] + good_k_mer_after[-(k-min_overlap):])[-(2*k-1):];
                                     return_path=(paths[p] + bases[j])[1:-min_overlap]
                                 print("Candidate path "+ path_connected + " target " + good_k_mer_after + " iteration " +str(i))
-                                if check_sequence(path_connected,qf,k,ext_threshold_local):
+                                if check_sequence(path_connected,qf,k,threshold):
                                     if i == min_overlap:
                                         print("Success path "+ start_km1 + paths[p]+ bases[j] + " target " + good_k_mer_after + " patch empty ")
                                         return None
