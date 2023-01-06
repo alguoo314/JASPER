@@ -465,7 +465,7 @@ def base_extension(len_seq_to_be_fixed,qf,k,good_kmer_before,good_k_mer_after,th
     if len(good_kmer_before) < k or len(good_k_mer_after) < k:
         return None
     bases = ["A", "C", "G", "T"]
-    start_km1 = good_kmer_before[:-1]   # store the k-1 bases in a variable no need to carry these around
+    start_km1 = good_kmer_before[0:k-1]   # store the k-1 bases in a variable no need to carry these around
     min_overlap = 5 # must be less than k
     ext_threshold=threshold
     ext_threshold_local=ext_threshold
@@ -473,8 +473,8 @@ def base_extension(len_seq_to_be_fixed,qf,k,good_kmer_before,good_k_mer_after,th
         paths = [] # array of all possible extensions
         max_ext = int((len_seq_to_be_fixed - 2*k)*1.2) + min_overlap + slack
         min_patch_len = len_seq_to_be_fixed - 2*k - slack                                                                                     
-        paths.append(good_kmer_before[-1])  # the last base of the initial k-mer makes the first path 
-        print("Looking for a path "+str(len_seq_to_be_fixed) + " " + str(min_patch_len) +" "+good_kmer_before+ " " +good_k_mer_after)
+        paths.append(good_kmer_before[k-1:k])  # the last base of the initial k-mer makes the first path 
+        print("Looking for a path "+str(len_seq_to_be_fixed) + " " + str(min_patch_len) +" "+ start_km1 + " " + paths[0] + " "+good_kmer_before+ " " +good_k_mer_after)
         for i in range(1,max_ext):
             paths = [l for l in paths if len(l) > 0]
             if len(paths) > 5000: #may change later
@@ -500,7 +500,7 @@ def base_extension(len_seq_to_be_fixed,qf,k,good_kmer_before,good_k_mer_after,th
                     if score >= ext_threshold_local:
                         last_bases=km1 + bases[j]
                         if i >= min_overlap and i >= min_patch_len:
-                            if last_bases.find(good_k_mer_after[0:min_overlap]) == k-min_overlap:
+                            if last_bases[-min_overlap:]==good_k_mer_after[0:min_overlap]:
                                 if path_ext_count: #check if this is the first extension
                                     path_connected=(start_km1 + (paths[p])[:-1] + bases[j] + good_k_mer_after[-(k-min_overlap):])[-(2*k-1):];
                                     return_path=((paths[p])[:-1] + bases[j])[1:-min_overlap]
