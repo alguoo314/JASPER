@@ -169,11 +169,13 @@ error_exit "The k-mer size supplied by -k must be a positive integer"
 fi
 
 if [ ! -e jasper.threshold.success ];then
-log "Determining lower threshold for bad kmers"
+log "Determining lower threshold for unreliable kmers"
 jellyfish histo -t $NUM_THREADS $JF_DB > jfhisto.csv && \
 jellyfish.py  jfhisto.csv > threshold.txt && \
 rm jfhisto.csv && \
 rm -f jasper.split.success && \
+THRESH=`cat threshold.txt` && \
+log "Lower threshold for unreliable kmers is $THRESH" && \
 touch jasper.threshold.success || error_exit "Computing threshold failed"
 fi
 
