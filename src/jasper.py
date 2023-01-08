@@ -41,7 +41,6 @@ def iteration(num_iter,ite,qf,query_path,k,test,fix,fout,fixedout,database,divis
         fixedout = fixedout[0]+"_iter"+str(ite)+"_"+fixedout[1]
         seq_names=[]
         for seqname,seq in seq_dict.items():
-            print(seq[1338110:1338284])
             seq_names.append(seqname)
             total_kmers += len(seq)-k+1
             good_before = -1 #index of the last guaranteed good base before the mismatch
@@ -106,7 +105,7 @@ def iteration(num_iter,ite,qf,query_path,k,test,fix,fout,fixedout,database,divis
             
         
         if fix == True:
-            base_fields = ['Contig', 'Base_coord', 'Original',"Fixed"]
+            base_fields = ['Contig', 'Base_coord', 'Original','Mutation']
             with open(fout,'w') as csvf:
                 csvwriter = csv.writer(csvf,delimiter=' ')
                 csvwriter.writerow(base_fields)
