@@ -11,7 +11,7 @@ import dna_jellyfish as jf
 
 def main(contigs,query_path,k,test,fix,fout,fixedout,db,thre,num_iter):
     try:
-        divisor = 100 #CHANGE LATER
+        divisor = 50 #CHANGE LATER
         qf  = jf.QueryMerFile(db)
         global solid_thre
         solid_thre = thre #this is the threshold determined from the jellyfish histogram
