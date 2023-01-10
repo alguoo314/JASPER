@@ -11,7 +11,7 @@ import dna_jellyfish as jf
 
 def main(contigs,query_path,k,test,fix,fout,fixedout,db,thre,num_iter):
     try:
-        divisor = 10 #CHANGE LATER
+        divisor = 100 #CHANGE LATER
         qf  = jf.QueryMerFile(db)
         global solid_thre
         solid_thre = thre #this is the threshold determined from the jellyfish histogram
@@ -65,7 +65,7 @@ def iteration(num_iter,ite,qf,query_path,k,test,fix,fout,fixedout,database,divis
                 occurrance = qf[mer]
                 rolling_thre = 0
                 if occurrance < solid_thre:
-                    print("Below normal threshold")
+                    print("Below normal threshold " + str(solid_thre))
                     i,seq,wrong_kmers_list,fixed_bases_list,break_while_loop = handle_bad_kmers(i,qf,seq,k,wrong_kmers_list,fix,fixed_bases_list,seqname,rolling_thre)
                     if break_while_loop:
                         break
@@ -73,16 +73,16 @@ def iteration(num_iter,ite,qf,query_path,k,test,fix,fout,fixedout,database,divis
                 elif i> 0 and occurrance < qf[jf.MerDNA(seq[max(0,i-k):max(k,i)]).get_canonical()]/2: #above the solid threshold but > 1/2 of the count of the kmer k bases before it
                     #check rolling average of previous k kmers
                     k_rolling_sum = 0
-                    ind = max(0,i-k)
+                    ind = max(0,i-10)
                     num=0
                     while ind < i:
                         num+=1
                         ind+=1
                         k_rolling_sum+=qf[jf.MerDNA(seq[ind:k+ind]).get_canonical()]
-                    rolling_thre = round(k_rolling_sum/(num*divisor))
+                    rolling_thre = round(k_rolling_sum/num/divisor)
                     if occurrance < rolling_thre:
-                        print("Below rolling threshold")
-                        i,seq,wrong_kmers_list,fixed_bases_list,break_while_loop = handle_bad_kmers(i,qf,seq,k,wrong_kmers_list,fix,fixed_bases_list,seqname,rolling_thre)
+                        print("Below rolling threshold " + str(rolling_thre) + " " +str(i))
+                        i,seq,wrong_kmers_list,fixed_bases_list,break_while_loop = handle_bad_kmers(i,qf,seq,k,wrong_kmers_list,fix,fixed_bases_list,seqname,round(k_rolling_sum/num/2))
                         if break_while_loop:
                             break
                     else:
