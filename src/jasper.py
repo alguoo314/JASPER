@@ -65,7 +65,7 @@ def iteration(num_iter,ite,qf,query_path,k,test,fix,fout,fixedout,database,divis
                 occurrance = qf[mer]
                 rolling_thre = 0
                 if occurrance < solid_thre:
-                    print("Below normal threshold " + str(solid_thre))
+                    print("Below normal threshold in " + seqname + " thresh " + str(solid_thre) + " position " +str(i))
                     i,seq,wrong_kmers_list,fixed_bases_list,break_while_loop = handle_bad_kmers(i,qf,seq,k,wrong_kmers_list,fix,fixed_bases_list,seqname,rolling_thre)
                     if break_while_loop:
                         break
@@ -81,7 +81,7 @@ def iteration(num_iter,ite,qf,query_path,k,test,fix,fout,fixedout,database,divis
                         k_rolling_sum+=qf[jf.MerDNA(seq[ind:k+ind]).get_canonical()]
                     rolling_thre = round(k_rolling_sum/num/divisor)
                     if occurrance < rolling_thre:
-                        print("Below rolling threshold " + str(rolling_thre) + " " +str(i))
+                        print("Below rolling threshold in " + seqname + " thresh " + str(rolling_thre) + " position " +str(i))
                         i,seq,wrong_kmers_list,fixed_bases_list,break_while_loop = handle_bad_kmers(i,qf,seq,k,wrong_kmers_list,fix,fixed_bases_list,seqname,round(k_rolling_sum/num/2))
                         if break_while_loop:
                             break
@@ -194,7 +194,7 @@ def handle_bad_kmers(i,qf,seq,k,wrong_kmers_list,fix,fixed_bases_list,seqname,ro
         good_after = max(0,good_before-k+2)+k #ie good_before+2
     to_be_fixed = seq[max(0,good_before-k+2):good_after+k-1]
     wrong_kmers_list.extend([*range(max(0,good_before-k+2),good_after)])
-    print("Found error in " + to_be_fixed + " positions " + str(good_before) + " " +  str(good_after) + " bad kmers " + str(len([*range(max(0,good_before-k+2),good_after)])))
+    print("Found error in contig " + seqname + " " + to_be_fixed + " positions " + str(good_before) + " " +  str(good_after) + " bad kmers " + str(len([*range(max(0,good_before-k+2),good_after)])))
     if fix == True:
         if good_before < 0:
             return i,seq,wrong_kmers_list,fixed_bases_list,False 
