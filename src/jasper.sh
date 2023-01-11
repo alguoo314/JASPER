@@ -6,7 +6,7 @@ NUM_THREADS=2
 CMD=jasper.py
 BATCH_SIZE=0
 PASSES=2
-KMER=31
+KMER=37
 JF_SIZE=0
 DEBUG=false
 QUERY="random.fa"
@@ -41,17 +41,16 @@ function usage {
     echo "Usage: jasper.sh [options]"
     echo "Options:"
     echo "Options (default value in (), *required):"
-    echo "-b, --batch=uint64               Desired batch size for the query (default value based on number of threads and assembly size). For the efficiency of jellyfish database loading, the max number of batches is limited to 8."
-    echo "-t, --threads=uint32             Number of threads (2)"
-    echo "-a --assembly                    *Path to the assembly file"
-    echo "-j --jf                          Path to the jellyfish database file. Required if --reads is not provided"
-    echo "-r --reads                       Path to the file(s) containing the reads to construct a jellyfish database. If two or more files are provided, please enclose the list with single-quotes, e.g. -r '/path_to/file1.fa /path_to/file2.fa'. Required if -j (--jf) is not provided"
-    echo "-k, --kmer=uint64                k-mer size (31)"
-    echo "-p, --num_passes=utint16         The number of iterations of running jasper for polishing (2), better polishing at the expense of more time" 
-    echo "-h, --help                       This message"
-    echo "-v, --verbose                    Verbose (False)"
-    echo "-d. --debug                      Debug mode. If supplied, all intermediate output files are kept"
-    
+    echo "-b, --batch=uint64              Desired batch size for the query (default value based on number of threads and assembly size)"
+    echo "-t, --threads=uint32            Number of threads (2)"
+    echo "-a, --assembly=path             *Assembly file"
+    echo "-j, --jf=path                   Jellyfish k-mer count database file. Required if --reads is not provided"
+    echo "-r|--reads=path                 File(s) containing the polishing reads. If two or more files are provided, please enclose the list with single-quotes, e.g. -r '/path_to/file1.fa /path_to/file2.fa'. Required if -j (--jf) is not provided"
+    echo "-k|--kmer=uint64                k-mer size (37)"
+    echo "-p|--num_passes=uint16          Number of polishing iterations (2), not recommended to increase much past 4" 
+    echo "-h|--help                       This message"
+    echo "-v|--verbose                    Verbose (False)"
+    echo "-d|--debug                      Debug mode. If supplied, all intermediate output files are kept"
 }
 
 while [[ $# > 0 ]]
