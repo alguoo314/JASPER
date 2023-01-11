@@ -2,11 +2,11 @@
 MYPATH="`dirname \"$0\"`"
 MYPATH="`( cd \"$MYPATH\" && pwd )`"
 export PATH=$MYPATH:$PATH;
-NUM_THREADS=1
+NUM_THREADS=2
 CMD=jasper.py
 BATCH_SIZE=0
 PASSES=2
-KMER=25
+KMER=31
 JF_SIZE=0
 DEBUG=false
 QUERY="random.fa"
@@ -37,19 +37,20 @@ function error_exit {
 }
 
 function usage {
+    echo "JASPER version 1.0.2"
     echo "Usage: jasper.sh [options]"
     echo "Options:"
     echo "Options (default value in (), *required):"
     echo "-b, --batch=uint64               Desired batch size for the query (default value based on number of threads and assembly size). For the efficiency of jellyfish database loading, the max number of batches is limited to 8."
-    echo  "-t, --threads=uint32             Number of threads (1)"
+    echo "-t, --threads=uint32             Number of threads (2)"
     echo "-a --assembly                    *Path to the assembly file"
     echo "-j --jf                          Path to the jellyfish database file. Required if --reads is not provided"
-    echo "-r --reads                       Path to the file(s) containing the reads to construct a jellyfish database. If two or more files are provided, please enclose the list with single-quotes, e.g. -r '/path_to/file1.fa /path_to/file2.fa'. Required if --jf is not provided"
-    echo "-k, --kmer=uint64                k-mer size (25)"
-    echo "-p, --num_passes=utint16         The number of iterations of running jasper for fixing (2). A number smaller than 6 is usually more than sufficient" 
+    echo "-r --reads                       Path to the file(s) containing the reads to construct a jellyfish database. If two or more files are provided, please enclose the list with single-quotes, e.g. -r '/path_to/file1.fa /path_to/file2.fa'. Required if -j (--jf) is not provided"
+    echo "-k, --kmer=uint64                k-mer size (31)"
+    echo "-p, --num_passes=utint16         The number of iterations of running jasper for polishing (2), better polishing at the expense of more time" 
     echo "-h, --help                       This message"
-    echo "-v, --verbose                    Output information (False)"
-    echo "-d. --debug                      Debug mode. If supplied, all the _iter*batch*csv and _iter*batch*fa.temp files will be kept to help debugging"
+    echo "-v, --verbose                    Verbose (False)"
+    echo "-d. --debug                      Debug mode. If supplied, all intermediate output files are kept"
     
 }
 
@@ -209,7 +210,7 @@ fi
 
 if [ ! -e jasper.join.success ];then
 log "Joining"
-cat _iter${LAST_IT}_$QUERY_FN.batch.*.fa.fixed.fa | perl -ane 'BEGIN{$seq="";$bs=int('$BATCH_SIZE');$bs=1 if($bs<=0);}{if($F[0] =~ /^>/){if(not($seq eq "")){$h{$ctg}=$seq;$seq=""}$ctg=$F[0]}else{$seq.=$F[0]}}END{$h{$ctg}=$seq;foreach $c(keys %h){if($c =~ /\:0$/){@f=split(/:/,$c);$ctg=join(":",@f[0..($#f-1)]);print "$ctg\n";$b=0;while(defined($h{$ctg.":$b"})){print $h{$ctg.":$b"};$b+=$bs;}print "\n";}}}' > $QUERY_FN.fixed.fasta.tmp && mv $QUERY_FN.fixed.fasta.tmp $QUERY_FN.fixed.fasta && \
+cat _iter${LAST_IT}_$QUERY_FN.batch.*.fa.fixed.fa | perl -ane 'BEGIN{$seq="";$bs=int('$BATCH_SIZE');$bs=1 if($bs<=0);}{if($F[0] =~ /^>/){if(not($seq eq "")){$h{$ctg}=$seq;$seq=""}$ctg=$F[0]}else{$seq.=$F[0]}}END{$h{$ctg}=$seq;foreach $c(keys %h){if($c =~ /\:0$/){@f=split(/:/,$c);$ctg=join(":",@f[0..($#f-1)]);print "$ctg\n";$b=0;while(defined($h{$ctg.":$b"})){print $h{$ctg.":$b"};$b+=$bs;}print "\n";}}}' > $QUERY_FN.fixed.fasta.tmp && mv $QUERY_FN.fixed.fasta.tmp $QUERY_FN.polished.fasta && \
 rm -f _iter*_$QUERY_FN.batch.*.fa.fixed.fa _iter*_$QUERY_FN.batch.*.fa.fixed.fa.tmp && \
 awk 'NR==1 || FNR>1' _iter*_$QUERY_FN.batch.*.fa.fix.csv  > $QUERY_FN.fixes.csv.tmp && sort -k1,1 -k2,2n $QUERY_FN.fixes.csv.tmp > $QUERY_FN.fixes.csv && \
 rm -f $QUERY_FN.fixes.csv.tmp && \
@@ -246,4 +247,4 @@ fi
 log "After Polishing: Q value = $Q_after"
 rm -f *qValCalcHelper.csv
 
-log "Polished sequence is in $QUERY_FN.fixed.fasta"
+log "Polished sequence is in $QUERY_FN.polished.fasta"
