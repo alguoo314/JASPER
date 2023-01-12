@@ -17,7 +17,7 @@ def main(contigs,query_path,k,test,fix,fout,fixedout,db,thre,num_iter):
         global debug 
         debug = False
         global step
-        step = max(1,round(k/15))
+        step = max(2,round(k/8))
         solid_thre = thre #this is the threshold determined from the jellyfish histogram
         for ite in range(num_iter+1): #num_iter rounds of fixing plus one more round to find the final q value
             query_path = iteration(num_iter,ite,qf,query_path,k,test,fix,fout,fixedout,db,divisor)
@@ -363,7 +363,7 @@ def fixdiploid(seq_to_be_fixed,k,threshold,qf,full_seq,good_before,good_after):
                 trial = seq_to_be_fixed[:len(seq_to_be_fixed)-k]+x+seq_to_be_fixed[len(seq_to_be_fixed)-k+1:k-1]+y+seq_to_be_fixed[k:]
                 fixed = True
                 check=bases_before+trial+base_after
-                for i in  range(len(check)-k+1):
+                for i in  range(0,len(check)-k+1,step):
                     if qf[jf.MerDNA(check[i:k+i]).get_canonical()] < threshold:
                         fixed  = False
                         break
@@ -452,7 +452,7 @@ def fix_same_base_del(seq_to_be_fixed,k,threshold,qf,num_below_thres_kmers):
         trial = trial[:k-1]+sb+trial[k-1:]
         fixed = True
         inserted+=1
-        for i in range(0,len(trial)-k+1,2):
+        for i in range(0,len(trial)-k+1,step):
             if qf[jf.MerDNA(trial[i:k+i]).get_canonical()] < threshold:
                 fixed  = False
                 new_bad +=1
@@ -498,7 +498,7 @@ def fix_same_base_insertion(seq_to_be_fixed,k,threshold,qf,num_below_thres_kmers
         fixed=True
         new_bad = 0
         flag = 0
-        for i in  range(0,len(seq_to_be_fixed_local)-k+1,2):
+        for i in  range(0,len(seq_to_be_fixed_local)-k+1,step):
             flag = 1
             if qf[jf.MerDNA(seq_to_be_fixed_local[i:k+i]).get_canonical()] < threshold:
                 fixed=False
@@ -619,7 +619,7 @@ if __name__ == '__main__':
     parser.add_argument("--db", default = None, help="The path to the .jf  database file. Not needed if --contigs is given.")
     parser.add_argument("--reads",nargs='+',default = None, help="The path to the .fasta file(s）containing the contigs to build the jellyfish database. Not needed if --db is provided")
     parser.add_argument("-q","--query", help = "The path to the .fasta query file")
-    parser.add_argument("-thre","--threshold", type=int, default = None, help = "The threshold for a bad kmer.")
+    parser.add_argument("-thre","--threshold", type=int, default = None, help = "The threshold for an unreliable kmer.")
     parser.add_argument("-k","--ksize", type=int,help = "The kmer size")
     parser.add_argument("--test", action='store_true',help = "Ouput the total num of bad kmers, and an estimation for Q value")
     parser.add_argument("--fix", action='store_true', help="Output the index of fixed bases and output the new sequence")
