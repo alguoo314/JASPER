@@ -17,7 +17,7 @@ def main(contigs,query_path,k,test,fix,fout,fixedout,db,thre,num_iter):
         global debug 
         debug = False
         global step
-        step = max(1,round(k/12))
+        step = max(1,round(k/15))
         solid_thre = thre #this is the threshold determined from the jellyfish histogram
         for ite in range(num_iter+1): #num_iter rounds of fixing plus one more round to find the final q value
             query_path = iteration(num_iter,ite,qf,query_path,k,test,fix,fout,fixedout,db,divisor)
@@ -535,8 +535,7 @@ def base_extension(len_seq_to_be_fixed,qf,k,good_kmer_before,good_k_mer_after,th
     start_km1 = good_kmer_before[0:k-1]   # store the k-1 bases in a variable no need to carry these around
     min_overlap = 5 # must be less than k
     ext_threshold=threshold
-    ext_threshold_local=ext_threshold
-    for slack in range(2,8,2):
+    for slack in range(2,10,4):
         paths = [] # array of all possible extensions
         max_ext = int((len_seq_to_be_fixed - 2*k)*1.2) + min_overlap + slack
         min_patch_len = len_seq_to_be_fixed - 2*k - slack                                                                                     
@@ -555,18 +554,9 @@ def base_extension(len_seq_to_be_fixed,qf,k,good_kmer_before,good_k_mer_after,th
                     continue
                 km1 = (start_km1 + paths[p])[-k+1:]  # get the k-1 bases off the end                                                                         
                 path_ext_count = 0  # this becomes 1 if we find an extension, and if no extension, then we delete the path              
-                max_score = 2
-                for j in range(4):
-                    score=qf[jf.MerDNA(km1 + bases[j]).get_canonical()]
-                    if score > max_score:
-                        max_score = score
-                if max_score >= ext_threshold:
-                    ext_threshold_local=ext_threshold
-                else:
-                    ext_threshold_local=max_score
                 for j in range(4):  # try to extend                                                       
                     score = qf[jf.MerDNA(km1 + bases[j]).get_canonical()]
-                    if score >= ext_threshold_local:
+                    if score >= ext_threshold:
                         last_bases=km1 + bases[j]
                         if i >= min_overlap and i >= min_patch_len:
                             if last_bases[-min_overlap:]==good_k_mer_after[0:min_overlap]:
