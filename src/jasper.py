@@ -70,14 +70,14 @@ def iteration(num_iter,ite,qf,query_path,k,test,fix,fout,fixedout,database,divis
                     if break_while_loop:
                         break
                 
-                elif i> 0 and occurrance < qf[jf.MerDNA(seq[max(0,i-k):max(k,i)]).get_canonical()]/2: #above the solid threshold but > 1/2 of the count of the kmer k bases before it
+                elif i > 0 and occurrance < qf[jf.MerDNA(seq[max(0,i-k):max(k,i)]).get_canonical()]/divisor: #above the solid threshold but > 1/divisor of the count of the kmer k bases before it
                     #check rolling average of previous k kmers
                     k_rolling_sum = 0
-                    ind = max(0,i-k+10)
+                    ind = max(0,i-k)
                     num=0
                     while ind < i:
                         num+=1
-                        ind+=1
+                        ind+=2
                         k_rolling_sum+=qf[jf.MerDNA(seq[ind:k+ind]).get_canonical()]
                     rolling_thre = round(k_rolling_sum/num/divisor)
                     if occurrance < rolling_thre:
