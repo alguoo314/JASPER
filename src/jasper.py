@@ -17,7 +17,7 @@ def main(contigs,query_path,k,test,fix,fout,fixedout,db,thre,num_iter):
         global debug 
         debug = False
         global step
-        step = max(2,round(k/8))
+        step = max(2,round(k/4))
         solid_thre = thre #this is the threshold determined from the jellyfish histogram
         for ite in range(num_iter+1): #num_iter rounds of fixing plus one more round to find the final q value
             query_path = iteration(num_iter,ite,qf,query_path,k,test,fix,fout,fixedout,db,divisor)

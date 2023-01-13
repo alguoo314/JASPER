@@ -136,7 +136,8 @@ if [ -z ${JF_DB+x} ];then
           log "Using existing jellyfish database $JF_DB"
         else
           log "Creating jellyfish database $JF_DB"
-          zcat -f $READS | jellyfish count -C -s $JF_SIZE -m $KMER -o $JF_DB -t $NUM_THREADS /dev/stdin
+          zcat -f $READS | jellyfish count -C -s $JF_SIZE -m $KMER -o /dev/stdout -t $NUM_THREADS /dev/stdin | tee $JF_DB | jellyfish histo -t $NUM_THREADS /dev/stdin > jfhisto$KMER.csv && \
+          touch jasper.histo.success
         fi
     else
         error_exit "Either a jf database or files of polishing reads must be provided in the argument."
@@ -168,19 +169,11 @@ if ! [[ $(($KMER-1)) =~ ^[0-9]+$ ]];then
 error_exit "The k-mer size supplied by -k must be a positive integer"
 fi
 
-if [ ! -e jasper.threshold.success ];then
-log "Determining lower threshold for unreliable kmers"
-jellyfish histo -t $NUM_THREADS $JF_DB > jfhisto.csv && \
-jellyfish.py  jfhisto.csv > threshold.txt && \
-rm jfhisto.csv && \
-rm -f jasper.split.success && \
-THRESH=`cat threshold.txt` && \
-log "Lower threshold for unreliable kmers is $THRESH" && \
-touch jasper.threshold.success || error_exit "Computing threshold failed"
-fi
-
-if ! [ -s threshold.txt ]; then
-error_exit "Local min of kmer counts is smaller than 4. The input read data is not suitable for polishing."
+if [ ! -e jasper.histo.success ] || [ ! -s jfhisto$KMER.csv ];then
+log "Computing K-mer histogram"
+jellyfish histo -t $NUM_THREADS $JF_DB > jfhisto$KMER.csv && \
+rm -f jasper.correct.success && \
+touch jasper.histo.success || error_exit "Computing mer counts histogram from mer_counts$KMER.jf failed, please make sure that mer_counts$KMER.jf is a valid Jellyfish mer counts file"
 fi
 
 LAST_IT=$(($PASSES-1))
@@ -197,10 +190,18 @@ fi
 
 if [ ! -e jasper.correct.success ];then
 log "Polishing"
-cat $JF_DB > /dev/null && \
+jellyfish.py  jfhisto$KMER.csv > threshold.txt && \
+
+if ! [ -s threshold.txt ]; then
+error_exit "Local min of kmer counts is smaller than 4. The input read data is not suitable for polishing."
+fi
+
+THRESH=`cat threshold.txt` && \
+log "Lower threshold for unreliable kmers is $THRESH" && \
 echo "#!/bin/bash" >run_jasper.sh && \
 echo "$CMD --db $JF_DB --query \$1 --ksize $KMER -p $PASSES --fix --fout \$1.fix.csv -ff \$1.fixed.fa.tmp --test -thre `head -n 1 threshold.txt| awk '{print $1}'` 1>jasper.out 2>jasper.err && mv _iter${LAST_IT}_\$1.fixed.fa.tmp _iter${LAST_IT}_\$1.fixed.fa" >> run_jasper.sh && \
 chmod 0755 run_jasper.sh && \
+cat $JF_DB > /dev/null && \
 ls $QUERY_FN.batch.*.fa | xargs -P $NEW_NUM_THREADS -I{} ./run_jasper.sh {} && \
 rm -f run_jasper.sh && \
 rm -f jasper.join.success && \
