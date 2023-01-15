@@ -17,7 +17,7 @@ def main(contigs,query_path,k,test,fix,fout,fixedout,db,thre,num_iter):
         global debug 
         debug = False
         global step
-        step = max(2,round(k/4))
+        step = max(2,round(k/8))
         solid_thre = thre #this is the threshold determined from the jellyfish histogram
         for ite in range(num_iter+1): #num_iter rounds of fixing plus one more round to find the final q value
             query_path = iteration(num_iter,ite,qf,query_path,k,test,fix,fout,fixedout,db,divisor)
@@ -516,7 +516,7 @@ def fix_same_base_insertion(seq_to_be_fixed,k,threshold,qf,num_below_thres_kmers
             continue
     if debug:
         print("Let's try to delete a single base in the middle of the sequence")
-    for i in range(5,len(seq_to_be_fixed)-5):
+    for i in range(1,len(seq_to_be_fixed)-1):
         trial = seq_to_be_fixed[:i]+seq_to_be_fixed[i+1:]
         #print("trying " +trial)
         if check_sequence(trial,qf,k,threshold):
@@ -588,10 +588,18 @@ def base_extension(len_seq_to_be_fixed,qf,k,good_kmer_before,good_k_mer_after,th
 
 def check_sequence(trial,qf,k,threshold):
     fixed = True
-    for i in  range(0,len(trial)-k+1,step):
-        if qf[jf.MerDNA(trial[i:k+i]).get_canonical()] < threshold:
-            fixed  = False
-            break
+    #we have to do this many times, so this function must be optimal
+    #we first check the first and the last k-mer and then check in the middle skipping every "step" k-mers
+    if qf[jf.MerDNA(trial[:k]).get_canonical()] < threshold:
+        fixed = False
+    else:
+        if qf[jf.MerDNA(trial[-k:]).get_canonical()] < threshold:
+            fixed = False
+        else:
+            for i in  range(step,len(trial)-k,step):
+                if qf[jf.MerDNA(trial[i:k+i]).get_canonical()] < threshold:
+                    fixed  = False
+                break
     return fixed
 
 
