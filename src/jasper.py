@@ -516,7 +516,8 @@ def fix_same_base_insertion(seq_to_be_fixed,k,threshold,qf,num_below_thres_kmers
             continue
     if debug:
         print("Let's try to delete a single base in the middle of the sequence")
-    for i in range(1,len(seq_to_be_fixed)-1):
+    skip = 1
+    for i in range(skip,len(seq_to_be_fixed)-skip):
         trial = seq_to_be_fixed[:i]+seq_to_be_fixed[i+1:]
         #print("trying " +trial)
         if check_sequence(trial,qf,k,threshold):
