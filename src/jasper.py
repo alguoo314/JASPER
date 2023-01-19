@@ -600,7 +600,7 @@ def check_sequence(trial,qf,k,threshold):
             for i in  range(step,len(trial)-k,step):
                 if qf[jf.MerDNA(trial[i:k+i]).get_canonical()] < threshold:
                     fixed  = False
-                break
+                    break
     return fixed
 
 
