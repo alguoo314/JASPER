@@ -363,7 +363,7 @@ def fixdiploid(seq_to_be_fixed,k,threshold,qf,full_seq,good_before,good_after):
                 trial = seq_to_be_fixed[:len(seq_to_be_fixed)-k]+x+seq_to_be_fixed[len(seq_to_be_fixed)-k+1:k-1]+y+seq_to_be_fixed[k:]
                 fixed = True
                 check=bases_before+trial+base_after
-                for i in  range(0,len(check)-k+1,step):
+                for i in  range(len(check)-k+1):
                     if qf[jf.MerDNA(check[i:k+i]).get_canonical()] < threshold:
                         fixed  = False
                         break
@@ -452,7 +452,7 @@ def fix_same_base_del(seq_to_be_fixed,k,threshold,qf,num_below_thres_kmers):
         trial = trial[:k-1]+sb+trial[k-1:]
         fixed = True
         inserted+=1
-        for i in range(0,len(trial)-k+1):
+        for i in range(0,len(trial)-k+1,2):
             if qf[jf.MerDNA(trial[i:k+i]).get_canonical()] < threshold:
                 fixed  = False
                 new_bad +=1
@@ -498,7 +498,7 @@ def fix_same_base_insertion(seq_to_be_fixed,k,threshold,qf,num_below_thres_kmers
         fixed=True
         new_bad = 0
         flag = 0
-        for i in  range(0,len(seq_to_be_fixed_local)-k+1):
+        for i in  range(0,len(seq_to_be_fixed_local)-k+1,2):
             flag = 1
             if qf[jf.MerDNA(seq_to_be_fixed_local[i:k+i]).get_canonical()] < threshold:
                 fixed=False
@@ -516,8 +516,7 @@ def fix_same_base_insertion(seq_to_be_fixed,k,threshold,qf,num_below_thres_kmers
             continue
     if debug:
         print("Let's try to delete a single base in the middle of the sequence")
-    skip = 1
-    for i in range(skip,len(seq_to_be_fixed)-skip):
+    for i in range(1,len(seq_to_be_fixed)-1):
         trial = seq_to_be_fixed[:i]+seq_to_be_fixed[i+1:]
         #print("trying " +trial)
         if check_sequence(trial,qf,k,threshold):
@@ -535,14 +534,14 @@ def base_extension(len_seq_to_be_fixed,qf,k,good_kmer_before,good_k_mer_after,th
     bases = ["A", "C", "G", "T"]
     start_km1 = good_kmer_before[0:k-1]   # store the k-1 bases in a variable no need to carry these around
     min_overlap = 5 # must be less than k
-    ext_threshold=threshold
-    for slack in range(2,10,4):
+    for slack in range(2,11,4):
         paths = [] # array of all possible extensions
         max_ext = int((len_seq_to_be_fixed - 2*k)*1.2) + min_overlap + slack
         min_patch_len = len_seq_to_be_fixed - 2*k - slack                                                                                     
         paths.append(good_kmer_before[k-1:k])  # the last base of the initial k-mer makes the first path 
         if debug:
             print("Looking for a path "+str(len_seq_to_be_fixed) + " " + str(min_patch_len) +" "+ start_km1 + " " + paths[0] + " "+good_kmer_before+ " " +good_k_mer_after)
+
         for i in range(1,max_ext):
             paths = [l for l in paths if len(l) > 0]
             if len(paths) > 5000: #may change later
@@ -554,10 +553,10 @@ def base_extension(len_seq_to_be_fixed,qf,k,good_kmer_before,good_k_mer_after,th
                 if paths[p]=="":
                     continue
                 km1 = (start_km1 + paths[p])[-k+1:]  # get the k-1 bases off the end                                                                         
-                path_ext_count = 0  # this becomes 1 if we find an extension, and if no extension, then we delete the path              
+                path_ext_count = 0  # this becomes 1 if we find an extension, and if no extension, then we delete the path
                 for j in range(4):  # try to extend                                                       
                     score = qf[jf.MerDNA(km1 + bases[j]).get_canonical()]
-                    if score >= ext_threshold:
+                    if score >= threshold:
                         last_bases=km1 + bases[j]
                         if i >= min_overlap and i >= min_patch_len:
                             if last_bases[-min_overlap:]==good_k_mer_after[0:min_overlap]:
