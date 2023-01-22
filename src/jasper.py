@@ -452,7 +452,7 @@ def fix_same_base_del(seq_to_be_fixed,k,threshold,qf,num_below_thres_kmers):
         trial = trial[:k-1]+sb+trial[k-1:]
         fixed = True
         inserted+=1
-        for i in range(0,len(trial)-k+1,2):
+        for i in range(0,len(trial)-k+1):
             if qf[jf.MerDNA(trial[i:k+i]).get_canonical()] < threshold:
                 fixed  = False
                 new_bad +=1
@@ -493,12 +493,13 @@ def fix_same_base_insertion(seq_to_be_fixed,k,threshold,qf,num_below_thres_kmers
     if debug:
         print("Original bad "+str(original_bad) + " sb "+ sb + " num_kmers " +str(num_below_thres_kmers))
     while seq_to_be_fixed[k-1] == sb and deleted < max_deletions:
+        current_bad = current_bad - 1
         deleted +=1
         seq_to_be_fixed_local = seq_to_be_fixed_local[:ind_to_be_removed] + seq_to_be_fixed_local[ind_to_be_removed+1:]
         fixed=True
         new_bad = 0
         flag = 0
-        for i in  range(0,len(seq_to_be_fixed_local)-k+1,2):
+        for i in  range(0,len(seq_to_be_fixed_local)-k+1):
             flag = 1
             if qf[jf.MerDNA(seq_to_be_fixed_local[i:k+i]).get_canonical()] < threshold:
                 fixed=False
