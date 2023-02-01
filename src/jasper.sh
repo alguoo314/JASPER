@@ -5,7 +5,7 @@ export PATH=$MYPATH:$PATH;
 NUM_THREADS=2
 CMD=jasper.py
 BATCH_SIZE=0
-PASSES=2
+PASSES=3
 KMER=37
 JF_SIZE=0
 DEBUG=false
@@ -47,7 +47,7 @@ function usage {
     echo "-j, --jf=path                   Jellyfish k-mer count database file. Required if --reads is not provided"
     echo "-r|--reads=path                 File(s) containing the polishing reads. If two or more files are provided, please enclose the list with single-quotes, e.g. -r '/path_to/file1.fa /path_to/file2.fa'. Required if -j (--jf) is not provided"
     echo "-k|--kmer=uint64                k-mer size (37)"
-    echo "-p|--num_passes=uint16          Number of polishing iterations (2), not recommended to increase much past 4" 
+    echo "-p|--num_passes=uint16          Number of polishing iterations (3), not recommended to increase much past 4" 
     echo "-h|--help                       This message"
     echo "-v|--verbose                    Verbose (False)"
     echo "-d|--debug                      Debug mode. If supplied, all intermediate output files are kept"
