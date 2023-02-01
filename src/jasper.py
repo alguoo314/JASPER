@@ -237,7 +237,7 @@ def fixing_sid(seq,to_be_fixed,k,threshold,qf,num_below_thres_kmers,good_before,
                 if b != None:
                     original = "i"+seq[good_after-1]
                     fixed_base = '-'
-                    fixed_ind = [good_after-2]
+                    fixed_ind = [good_after-1]
                     seq = seq[:max(0,good_before-k+2)]+fixed_subseq+seq[good_after+k-1:]       
         elif num_below_thres_kmers == k-1: #deletion or same base insertion or substitution
            removed_base,fixed_subseq = fix_del(to_be_fixed,k,threshold,qf)
@@ -480,7 +480,7 @@ def fix_same_base_del(seq_to_be_fixed,k,threshold,qf,num_below_thres_kmers):
 def fix_same_base_insertion(seq_to_be_fixed,k,threshold,qf,num_below_thres_kmers):
     if debug:
         print("Trying same base insertion in " + seq_to_be_fixed)
-    if threshold > solid_thre: #We dont use complicated fixing method on kmers below the rolling threshold 
+    if threshold > solid_thre: #We dont use complicated fixing method on kmers below the rolling threshold but above the solid (relative) threshold Rt
         return None,None,None
     ind_to_be_removed = k-1
     sb = seq_to_be_fixed[k-1] #sb stands for same base
@@ -532,7 +532,7 @@ def base_extension(len_seq_to_be_fixed,qf,k,good_kmer_before,good_k_mer_after,th
         return None
     bases = ["A", "C", "G", "T"]
     start_km1 = good_kmer_before[0:k-1]   # store the k-1 bases in a variable no need to carry these around
-    min_overlap = 5 # must be less than k
+    min_overlap = 5
     for slack in range(2,11,4):
         paths = [] # array of all possible extensions
         max_ext = int((len_seq_to_be_fixed - 2*k)*1.2) + min_overlap + slack
@@ -543,7 +543,7 @@ def base_extension(len_seq_to_be_fixed,qf,k,good_kmer_before,good_k_mer_after,th
 
         for i in range(1,max_ext):
             paths = [l for l in paths if len(l) > 0]
-            if len(paths) > 5000: #may change later
+            if len(paths) > 5000:
                 if debug:
                     print("Too many paths")
                 return None
