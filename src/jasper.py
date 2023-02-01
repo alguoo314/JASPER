@@ -11,7 +11,7 @@ import dna_jellyfish as jf
 
 def main(contigs,query_path,k,test,fix,fout,fixedout,db,thre,num_iter):
     try:
-        divisor = 50 #CHANGE LATER
+        divisor = 50
         qf  = jf.QueryMerFile(db)
         global solid_thre
         global debug 
@@ -247,12 +247,12 @@ def fixing_sid(seq,to_be_fixed,k,threshold,qf,num_below_thres_kmers,good_before,
                seq = seq[:max(0,good_before-k+2)]+fixed_subseq+seq[good_after+k-1:]
                fixed_base = removed_base 
            else:
-               inserted_base,fixed_subseq = fix_same_base_insertion(to_be_fixed,k,threshold,qf,num_below_thres_kmers)
+               inserted_index,inserted_base,fixed_subseq = fix_same_base_insertion(to_be_fixed,k,threshold,qf,num_below_thres_kmers)
                if inserted_base != None:
                    original = "i"+inserted_base
                    fixed_base = "-"
                    seq = seq[:max(0,good_before-k+2)]+fixed_subseq+seq[good_after+k-1:]
-                   fixed_ind = [good_before] #insertion after this index
+                   fixed_ind = [inserted_index+max(0,good_before-k+2)] #inserted base at this index
                else:
                    left,right,l_or_r,fixed_subseq =  fixdiploid(to_be_fixed,k,threshold,qf,seq,good_before,good_after) #diploidy of two adjacent bases                           
                    if l_or_r !=  None:
@@ -281,17 +281,17 @@ def fixing_sid(seq,to_be_fixed,k,threshold,qf,num_below_thres_kmers,good_before,
                 seq = seq[:max(0,good_before-k+2)]+fixed_subseq+seq[good_after+k-1:]
                 
             else: 
-                inserted_base,fixed_subseq = fix_same_base_insertion(to_be_fixed,k,threshold,qf,num_below_thres_kmers)
+                inserted_index,inserted_base,fixed_subseq = fix_same_base_insertion(to_be_fixed,k,threshold,qf,num_below_thres_kmers)
                 if inserted_base != None:
                     original = "i"+inserted_base
                     seq = seq[:max(0,good_before-k+2)]+fixed_subseq+seq[good_after+k-1:]
                     fixed_base = "-"
-                    fixed_ind = [good_before] #insertion after this index
+                    fixed_ind = [inserted_index+max(0,good_before-k+2)] #inserted base is at this index
                 else:
-                    removed_base,fixed_subseq = fix_same_base_del(to_be_fixed,k,threshold,qf,num_below_thres_kmers)
+                    removed_index,removed_base,fixed_subseq = fix_same_base_del(to_be_fixed,k,threshold,qf,num_below_thres_kmers)
                     if removed_base != None: #deletion of a base
                         original = "d-"
-                        fixed_ind = [good_before]
+                        fixed_ind = [removed_index+max(0,good_before-k+2)]
                         seq = seq[:max(0,good_before-k+2)]+fixed_subseq+seq[good_after+k-1:]
                         fixed_base = removed_base
 
@@ -436,7 +436,7 @@ def fix_same_base_del(seq_to_be_fixed,k,threshold,qf,num_below_thres_kmers):
     if debug:
         print("Trying same base deletion in " + seq_to_be_fixed)
     if threshold > solid_thre: #We dont use complicated fixing method on kmers below the rolling threshold 
-        return None,None
+        return None,None,None
     sb = seq_to_be_fixed[k-2] #sb stands for same base
     fixed = False
     trial=seq_to_be_fixed
@@ -459,7 +459,7 @@ def fix_same_base_del(seq_to_be_fixed,k,threshold,qf,num_below_thres_kmers):
         if fixed == True:
             if debug:
                 print("Success1 " + trial)
-            return sb*inserted,trial
+            return k-1,sb*inserted,trial
         if (new_bad >= current_bad):
             inserted = max_insertions
             break
@@ -474,14 +474,14 @@ def fix_same_base_del(seq_to_be_fixed,k,threshold,qf,num_below_thres_kmers):
         if check_sequence(trial,qf,k,threshold):
             if debug:
                 print("Success2 " + trial)
-            return alt,trial 
-    return None,None
+            return k-2,alt,trial 
+    return None,None,None
 
 def fix_same_base_insertion(seq_to_be_fixed,k,threshold,qf,num_below_thres_kmers):
     if debug:
         print("Trying same base insertion in " + seq_to_be_fixed)
     if threshold > solid_thre: #We dont use complicated fixing method on kmers below the rolling threshold 
-        return None,None
+        return None,None,None
     ind_to_be_removed = k-1
     sb = seq_to_be_fixed[k-1] #sb stands for same base
     seq_to_be_fixed_local=seq_to_be_fixed
@@ -507,7 +507,7 @@ def fix_same_base_insertion(seq_to_be_fixed,k,threshold,qf,num_below_thres_kmers
         if (fixed == True):
             if debug:
                 print("Success1 " + seq_to_be_fixed_local)
-            return sb*deleted,seq_to_be_fixed_local
+            return k-1,sb*deleted,seq_to_be_fixed_local
         if (new_bad >= current_bad):
             break
         else: #delete one more base
@@ -521,8 +521,8 @@ def fix_same_base_insertion(seq_to_be_fixed,k,threshold,qf,num_below_thres_kmers
         if check_sequence(trial,qf,k,threshold):
             if debug:
                 print("Success2 " + trial)
-            return seq_to_be_fixed[i],trial #Need further modification later because the index for the deleted base is different from case 1
-    return None,None
+            return i,seq_to_be_fixed[i],trial #Need further modification later because the index for the deleted base is different from case 1
+    return None,None,None
 
 
 def base_extension(len_seq_to_be_fixed,qf,k,good_kmer_before,good_k_mer_after,threshold):
