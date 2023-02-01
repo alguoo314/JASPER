@@ -29,7 +29,7 @@ def main(contigs,query_path,k,test,fix,fout,fixedout,db,thre,num_iter):
          sys.exit(1)         
             
 
-def iteration(num_iter,ite,qf,query_path,k,test,fix,fout,fixedout,database,divisor=5):   
+def iteration(num_iter,ite,qf,query_path,k,test,fix,fout,fixedout,database,divisor=50):   
     try:
         if ite == num_iter:
             fix=False
