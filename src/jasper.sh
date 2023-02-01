@@ -212,9 +212,11 @@ if [ ! -e jasper.join.success ];then
 log "Joining"
 cat _iter${LAST_IT}_$QUERY_FN.batch.*.fa.fixed.fa | perl -ane 'BEGIN{$seq="";$bs=int('$BATCH_SIZE');$bs=1 if($bs<=0);}{if($F[0] =~ /^>/){if(not($seq eq "")){$h{$ctg}=$seq;$seq=""}$ctg=$F[0]}else{$seq.=$F[0]}}END{$h{$ctg}=$seq;foreach $c(keys %h){if($c =~ /\:0$/){@f=split(/:/,$c);$ctg=join(":",@f[0..($#f-1)]);print "$ctg\n";$b=0;while(defined($h{$ctg.":$b"})){print $h{$ctg.":$b"};$b+=$bs;}print "\n";}}}' > $QUERY_FN.fixed.fasta.tmp && mv $QUERY_FN.fixed.fasta.tmp $QUERY_FN.polished.fasta && \
 rm -f _iter*_$QUERY_FN.batch.*.fa.fixed.fa _iter*_$QUERY_FN.batch.*.fa.fixed.fa.tmp && \
-awk 'NR==1 || FNR>1' _iter*_$QUERY_FN.batch.*.fa.fix.csv  > $QUERY_FN.fixes.csv.tmp && \
-awk -F ':' '{print $1" "$2}' $QUERY_FN.fixes.csv.tmp |sort -k1,1 -k2,2n -k3,3n -S 10% |awk '{print $1":"$2,$3,$4,$5}' > $QUERY_FN.fixes.csv && \     
-rm -f $QUERY_FN.fixes.csv.tmp && \
+awk 'NR==1 || FNR>1' _iter*_$QUERY_FN.batch.*.fa.fix.csv |\
+awk -F ':' '{print $1" "$2}' |\
+sort -k1,1 -k2,2n -k3,3n -S 10% |\
+awk '{print $1":"$2" "$3" "$4" "$5}' > $QUERY_FN.fixes.csv.tmp && \
+mv $QUERY_FN.fixes.csv.tmp  $QUERY_FN.fixes.csv && \
 touch jasper.join.success || error_exit "Joining failed"
 if [ "$DEBUG" = false ] ; then
     rm -f _iter*_$QUERY_FN.batch.*.fa.fix.csv && \
