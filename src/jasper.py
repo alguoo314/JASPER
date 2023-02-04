@@ -18,9 +18,12 @@ def main(contigs,query_path,k,test,fix,fout,fixedout,db,thre,num_iter):
         debug = False
         global step
         step = max(2,round(k/8))
+        global user_fix_choice
+        user_fix_choice = fix
         solid_thre = thre #this is the threshold determined from the jellyfish histogram
+        seq_dict = None
         for ite in range(num_iter+1): #num_iter rounds of fixing plus one more round to find the final q value
-            query_path = iteration(num_iter,ite,qf,query_path,k,test,fix,fout,fixedout,db,divisor)
+            query_path,seq_dict = iteration(num_iter,ite,qf,query_path,k,test,fix,fout,fixedout,db,seq_dict,divisor)
     except:
          exception_type, exception_object, exception_traceback = sys.exc_info()
          line_number = exception_traceback.tb_lineno
@@ -29,11 +32,15 @@ def main(contigs,query_path,k,test,fix,fout,fixedout,db,thre,num_iter):
          sys.exit(1)         
             
 
-def iteration(num_iter,ite,qf,query_path,k,test,fix,fout,fixedout,database,divisor=50):   
+def iteration(num_iter,ite,qf,query_path,k,test,fix,fout,fixedout,database,seq_dict,divisor=50):   
     try:
         if ite == num_iter:
             fix=False
-        seq_dict = parse_fasta(query_path)
+            fixedout = os.path.split(fixedout)
+            fixedout = fixedout[0]+"_iter"+str(ite-1)+"_"+fixedout[1]
+            
+        if ite == 0:
+            seq_dict = parse_fasta(query_path)
         wrong_kmers_list = []
         seqs = []
         fixed_bases_list = []
@@ -41,8 +48,6 @@ def iteration(num_iter,ite,qf,query_path,k,test,fix,fout,fixedout,database,divis
         total_kmers = 0
         fout = os.path.split(fout)
         fout = fout[0]+"_iter"+str(ite)+"_"+fout[1]
-        fixedout = os.path.split(fixedout)
-        fixedout = fixedout[0]+"_iter"+str(ite)+"_"+fixedout[1]
         seq_names=[]
         for seqname,seq in seq_dict.items():
             seq_names.append(seqname)
@@ -116,7 +121,7 @@ def iteration(num_iter,ite,qf,query_path,k,test,fix,fout,fixedout,database,divis
                 csvwriter = csv.writer(csvf,delimiter=' ')
                 csvwriter.writerow(base_fields)
                 csvwriter.writerows(fixed_bases_list)
-
+        if ite == num_iter and user_fix_choice == True:
             i = 0
             with open(fixedout,'w') as of:
                 for seqname in seq_names:
@@ -125,9 +130,16 @@ def iteration(num_iter,ite,qf,query_path,k,test,fix,fout,fixedout,database,divis
                     for l in new_seq:
                         of.write(l+"\n")
                     i+=1
-            return fixedout
-        
-        return 
+
+        else:
+            i = 0
+            seq_dict = {}
+            for seqname in seq_names:
+                seq_dict[seqname] = seqs[i]
+                i+=1
+
+        return fixedout,seq_dict
+         
     except:
         exception_type, exception_object, exception_traceback = sys.exc_info()
         line_number = exception_traceback.tb_lineno
