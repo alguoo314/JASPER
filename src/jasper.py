@@ -13,9 +13,10 @@ def main(contigs,query_path,k,test,fix,fout,fixedout,db,thre,num_iter):
     try:
         divisor = 50
         qf  = jf.QueryMerFile(db)
+        print("Opened JF database " + db)
         global solid_thre
         global debug 
-        debug = False
+        debug = False 
         global step
         step = max(2,round(k/8))
         global user_fix_choice
@@ -39,23 +40,28 @@ def iteration(num_iter,ite,qf,query_path,k,test,fix,fout,fixedout,database,seq_d
             fixedout = os.path.split(fixedout)
             fixedout = fixedout[0]+"_iter"+str(ite-1)+"_"+fixedout[1]
             
+        print("Iteration " + str(ite))
         if ite == 0:
             seq_dict = parse_fasta(query_path)
-        wrong_kmers_list = []
-        seqs = []
+            print("Iteration " + str(ite) + " reading fasta done")
+
+        wrong_kmers_count = 0
         fixed_bases_list = []
         total_wrong_kmers = 0
         total_kmers = 0
         fout = os.path.split(fout)
         fout = fout[0]+"_iter"+str(ite)+"_"+fout[1]
-        seq_names=[]
         for seqname,seq in seq_dict.items():
-            seq_names.append(seqname)
+            print("Working on " + seqname)
             total_kmers += len(seq)-k+1
             good_before = -1 #index of the last guaranteed good base before the mismatch
             i = 0 #first k mer at position 0
-            wrong_kmers_list = []                                                                                                       
+            timer = 0
+            wrong_kmers_count = 0                                                                                                      
             while i < len(seq)-k+1:
+                timer+=1
+                if timer % 100000 == 0:
+                  print ("Processed "+ str(timer) + " bases")
                 mer_string = seq[i:k+i]
                 N = mer_string.find('N') #ignore all kmers containing non acgt bases
                 if N >= 0:
@@ -65,18 +71,21 @@ def iteration(num_iter,ite,qf,query_path,k,test,fix,fout,fixedout,database,seq_d
                 if n >= 0:
                     i+=(n+1)
                     continue
+                co = mer_string.find(':')
+                if co >= 0:
+                    i+=(co+1)
+                    continue
                 match = re.match("^[ACTGactg]*$",mer_string) #other invalid characters other than N or n
                 if match is None:
                     i +=1
                     continue
-                    
-                mer = jf.MerDNA(mer_string).get_canonical()
-                occurrance = qf[mer]
+
+                occurrance = qf[jf.MerDNA(mer_string).get_canonical()]
                 rolling_thre = 0
                 if occurrance < solid_thre:
                     if debug:
                         print("Below normal threshold in " + seqname + " thresh " + str(solid_thre) + " position " +str(i))
-                    i,seq,wrong_kmers_list,fixed_bases_list,break_while_loop = handle_bad_kmers(i,qf,seq,k,wrong_kmers_list,fix,fixed_bases_list,seqname,rolling_thre)
+                    i,seq,wrong_kmers_count,fixed_bases_list,break_while_loop = handle_bad_kmers(i,qf,seq,k,wrong_kmers_count,fix,fixed_bases_list,seqname,rolling_thre)
                     if break_while_loop:
                         break
                 
@@ -93,18 +102,17 @@ def iteration(num_iter,ite,qf,query_path,k,test,fix,fout,fixedout,database,seq_d
                     if occurrance < rolling_thre:
                         if debug:
                             print("Below rolling threshold in " + seqname + " thresh " + str(rolling_thre) + " position " +str(i))
-                        i,seq,wrong_kmers_list,fixed_bases_list,break_while_loop = handle_bad_kmers(i,qf,seq,k,wrong_kmers_list,fix,fixed_bases_list,seqname,round(k_rolling_sum/num/2))
+                        i,seq,wrong_kmers_count,fixed_bases_list,break_while_loop = handle_bad_kmers(i,qf,seq,k,wrong_kmers_count,fix,fixed_bases_list,seqname,round(k_rolling_sum/num/2))
                         if break_while_loop:
                             break
                     else:
                         i+=k-1
                     
                 else: #good  kmer
-                    i += k-1
-            
+                    i += k-1  
                     
-            seqs.append(seq)
-            total_wrong_kmers += len(wrong_kmers_list)
+            seq_dict[seqname]=seq
+            total_wrong_kmers += wrong_kmers_count
 
 
         if test == True:
@@ -124,19 +132,12 @@ def iteration(num_iter,ite,qf,query_path,k,test,fix,fout,fixedout,database,seq_d
         if ite == num_iter and user_fix_choice == True:
             i = 0
             with open(fixedout,'w') as of:
-                for seqname in seq_names:
+                for seqname,seq in seq_dict.items():
                     of.write(">{}\n".format(seqname))
-                    new_seq = split_output(seqs[i],60)
+                    new_seq = split_output(seq,60)
                     for l in new_seq:
                         of.write(l+"\n")
                     i+=1
-
-        else:
-            i = 0
-            seq_dict = {}
-            for seqname in seq_names:
-                seq_dict[seqname] = seqs[i]
-                i+=1
 
         return fixedout,seq_dict
          
@@ -158,16 +159,26 @@ def split_output(seq, num_per_line=60): #make a new line after num_per_line base
     return output
 
          
-def handle_bad_kmers(i,qf,seq,k,wrong_kmers_list,fix,fixed_bases_list,seqname,rolling_thre):
+def handle_bad_kmers(i,qf,seq,k,wrong_kmers_count,fix,fixed_bases_list,seqname,rolling_thre):
     thre = solid_thre
     if rolling_thre > 0:
        thre =  rolling_thre 
         
     j = i-1
-    occurrance = qf[jf.MerDNA(seq[j:k+j]).get_canonical()] 
+    match = re.match("^[ACTGactg]*$",seq[j:k+j])
+    if match is None:
+        return i+1,seq,wrong_kmers_count,fixed_bases_list,False        
+    else:
+        occurrance = qf[jf.MerDNA(seq[j:k+j]).get_canonical()] 
+
     while occurrance < thre and j>=0:
         j = j-1
-        occurrance = qf[jf.MerDNA(seq[j:k+j]).get_canonical()]
+        match = re.match("^[ACTGactg]*$",seq[j:k+j])
+        if match is None:
+            return i+1,seq,wrong_kmers_count,fixed_bases_list,False
+        else:
+            occurrance = qf[jf.MerDNA(seq[j:k+j]).get_canonical()]
+
     good_before = j+k-1 #the right base of a good kmer
     prev_good_count = qf[jf.MerDNA(seq[j:k+j]).get_canonical()]
     kmer_count = qf[jf.MerDNA(seq[i:k+i]).get_canonical()]                                                            
@@ -184,7 +195,7 @@ def handle_bad_kmers(i,qf,seq,k,wrong_kmers_list,fix,fixed_bases_list,seqname,ro
             if i-j > k:
                 if debug:
                     print("the sequence of under-rolling-threshold kmers is longer than k")
-                return i+1,seq,wrong_kmers_list,fixed_bases_list,False #ignore these kmers, move to the next index. In next iteration of the while loop, all k kmers before are the previously below-rolling-threshold kmers, which decreases the rolling-threshold
+                return i+1,seq,wrong_kmers_count,fixed_bases_list,False #ignore these kmers, move to the next index. In next iteration of the while loop, all k kmers before are the previously below-rolling-threshold kmers, which decreases the rolling-threshold
             i+=1
             kmer_count = qf[jf.MerDNA(seq[i:k+i]).get_canonical()]
     good_after = i #the first base of the first good kmer after the mismatch
@@ -203,7 +214,7 @@ def handle_bad_kmers(i,qf,seq,k,wrong_kmers_list,fix,fixed_bases_list,seqname,ro
             prev_good_count = qf[jf.MerDNA(seq[good_before-k+2:good_before+2]).get_canonical()]
             good_before +=1                        
         if good_before >= len(seq)-1:
-            return i,seq,wrong_kmers_list,fixed_bases_list,True #break the while loop in the outer function. Switch to next seq
+            return i,seq,wrong_kmers_count,fixed_bases_list,True #break the while loop in the outer function. Switch to next seq
     #additional check for case 000...high high...000
     second = seq[max(0,good_before-k+2)+1:max(0,good_before-k+2)+k+1]
     k_minus_1 = seq[max(0,good_before-k+2)+k-2:max(0,good_before-k+2)+k+k-2]
@@ -212,12 +223,12 @@ def handle_bad_kmers(i,qf,seq,k,wrong_kmers_list,fix,fixed_bases_list,seqname,ro
     if qf[jf.MerDNA(second).get_canonical()] < thre and qf[jf.MerDNA(k_minus_1).get_canonical()] < thre and qf[jf.MerDNA(k_th).get_canonical()] < thre  and qf[jf.MerDNA(k_plus_1).get_canonical()]>=thre:
         good_after = max(0,good_before-k+2)+k #ie good_before+2
     to_be_fixed = seq[max(0,good_before-k+2):good_after+k-1]
-    wrong_kmers_list.extend([*range(max(0,good_before-k+2),good_after)])
+    wrong_kmers_count+=len([*range(max(0,good_before-k+2),good_after)])
     if debug:
         print("Found error in contig " + seqname + " " + to_be_fixed + " positions " + str(good_before) + " " +  str(good_after) + " bad kmers " + str(len([*range(max(0,good_before-k+2),good_after)])))
     if fix == True:
         if good_before < 0:
-            return i,seq,wrong_kmers_list,fixed_bases_list,False 
+            return i,seq,wrong_kmers_count,fixed_bases_list,False 
         seq,fixed_base,original,fixed_ind = fixing_sid(seq,to_be_fixed,k,thre,qf,len([*range(max(0,good_before-k+2),good_after)]),good_before,good_after) #fix simple sub/insert/del cases
         if fixed_base != "nN":
             if rolling_thre > 0:
@@ -228,7 +239,7 @@ def handle_bad_kmers(i,qf,seq,k,wrong_kmers_list,fix,fixed_bases_list,seqname,ro
             else:
                 fixed_bases_list.append([seqname,fixed_ind[0],fixed_base[0],original[0]])
                 fixed_bases_list.append([seqname,fixed_ind[1],fixed_base[1],original[1]])
-    return i,seq,wrong_kmers_list,fixed_bases_list,False 
+    return i,seq,wrong_kmers_count,fixed_bases_list,False 
 
 
 def fixing_sid(seq,to_be_fixed,k,threshold,qf,num_below_thres_kmers,good_before,good_after): #fix sub and indel
@@ -307,10 +318,11 @@ def fixing_sid(seq,to_be_fixed,k,threshold,qf,num_below_thres_kmers,good_before,
                         seq = seq[:max(0,good_before-k+2)]+fixed_subseq+seq[good_after+k-1:]
                         fixed_base = removed_base
 
-        elif num_below_thres_kmers > k: #two or more nearby errors.
+        elif num_below_thres_kmers > k and num_below_thres_kmers < k+12: #two or more nearby errors.
             good_kmer_before = seq[good_before-k+1:good_before+1] 
             good_k_mer_after = seq[good_after:good_after+k] 
             fixed_seq = base_extension(len(to_be_fixed),qf,k,good_kmer_before,good_k_mer_after,threshold)
+            
             if fixed_seq != None:
                 fixed_ind = []
                 fixed_base = []
@@ -545,7 +557,7 @@ def base_extension(len_seq_to_be_fixed,qf,k,good_kmer_before,good_k_mer_after,th
     bases = ["A", "C", "G", "T"]
     start_km1 = good_kmer_before[0:k-1]   # store the k-1 bases in a variable no need to carry these around
     min_overlap = 5
-    for slack in range(2,11,4):
+    for slack in range(2,9,6):
         paths = [] # array of all possible extensions
         max_ext = int((len_seq_to_be_fixed - 2*k)*1.2) + min_overlap + slack
         min_patch_len = len_seq_to_be_fixed - 2*k - slack                                                                                     

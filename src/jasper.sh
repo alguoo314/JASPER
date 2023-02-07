@@ -77,7 +77,7 @@ do
             ;;
 	-r|--reads)
 	    export READS="$2"
-	    export JF_SIZE=`stat -c%s $READS |awk '{n+=$1}END{print int(n/10)}'`
+	    export JF_SIZE=`stat -c%s $READS |awk '{n+=$1}END{print int(n/20)}'`
 	    shift
 	    ;;
         -p|--num_passes)
@@ -183,7 +183,34 @@ if [ ! -e jasper.split.success ];then
 log "Splitting query into batches for parallel execution"
 rm -f $QUERY_FN.batch.*.fa && \
 perl -ane 'BEGIN{$seq="";$bs=int('$BATCH_SIZE');}{if($F[0] =~ /^>/){if(not($seq eq "")){for($ci=0;$ci<length($seq);$ci+=$bs){print "$ctg:$ci\n",substr($seq,$ci,$bs),"\n";}}$ctg=$F[0];$seq=""}else{$seq.=$F[0]}}END{if(not($seq eq "")){for($ci=0;$ci<length($seq);$ci+=$bs){print "$ctg:$ci\n",substr($seq,$ci,$bs),"\n";}}}' $QUERY | \
-perl -ane 'BEGIN{$batch_index=0;$output=0;open(FILE,">'$QUERY_FN'.batch.".$batch_index.".fa");}{if($F[0]=~/^>/){if($output>int('$BATCH_SIZE')){close(FILE);$batch_index++;open(FILE,">'$QUERY_FN'.batch.".$batch_index.".fa");$output=0;}}else{$output+=length($F[0]);}print FILE join(" ",@F),"\n";}' && \
+perl -ane 'BEGIN{
+  $batch_index=1;
+  $output=0;
+  open(NFILE,">'$QUERY_FN'.batch.".$batch_index.".names");
+  open(FILE,">'$QUERY_FN'.batch.".$batch_index.".fa");
+  print FILE ">batch$batch_index\n";
+}{
+  if($F[0]=~/^>/){
+    if($output>int('$BATCH_SIZE')){
+      print FILE "\n";
+      close(FILE);
+      close(NFILE);
+      $batch_index++;
+      open(FILE,">'$QUERY_FN'.batch.".$batch_index.".fa");
+      print FILE ">batch$batch_index\n";
+      open(NFILE,">'$QUERY_FN'.batch.".$batch_index.".names");
+      $output=0;
+    }else{
+      print FILE ":" if($output>0);
+    }
+    print NFILE join(" ",@F),"\n";
+  }else{
+    $output+=length($F[0]);
+    print FILE $F[0];
+  }
+}END{
+  print FILE "\n";
+}' && \
 rm -f jasper.correct.success && \
 touch jasper.split.success || error_exit "Splitting files failed, do you have enough disk space?"
 fi
@@ -210,7 +237,39 @@ fi
 
 if [ ! -e jasper.join.success ];then
 log "Joining"
-cat _iter${LAST_IT}_$QUERY_FN.batch.*.fa.fixed.fa | perl -ane 'BEGIN{$seq="";$bs=int('$BATCH_SIZE');$bs=1 if($bs<=0);}{if($F[0] =~ /^>/){if(not($seq eq "")){$h{$ctg}=$seq;$seq=""}$ctg=$F[0]}else{$seq.=$F[0]}}END{$h{$ctg}=$seq;foreach $c(keys %h){if($c =~ /\:0$/){@f=split(/:/,$c);$ctg=join(":",@f[0..($#f-1)]);print "$ctg\n";$b=0;while(defined($h{$ctg.":$b"})){print $h{$ctg.":$b"};$b+=$bs;}print "\n";}}}' > $QUERY_FN.fixed.fasta.tmp && mv $QUERY_FN.fixed.fasta.tmp $QUERY_FN.polished.fasta && \
+NUM_BATCHES=`ls $QUERY_FN.batch.*.fa|wc -l`
+for b in $(seq 1 $NUM_BATCHES);do
+  paste $QUERY_FN.batch.$b.names <(grep -v '^>' $QUERY_FN.batch.$b.fa |tr -d '\n' | tr ':' '\n') |awk '{print $1"\n"$2}' 
+done |\
+perl -ane 'BEGIN{
+  $seq="";
+  $bs=int('$BATCH_SIZE');
+  $bs=1 if($bs<=0);
+}
+{
+  if($F[0] =~ /^>/){
+    if(not($seq eq "")){
+      $h{$ctg}=$seq;
+      $seq="";
+    }
+    $ctg=$F[0];
+  }else{
+    $seq.=$F[0];
+  }
+}END{
+  $h{$ctg}=$seq;
+  foreach $c(keys %h){
+    if($c =~ /\:0$/){
+      @f=split(/:/,$c);
+      $ctg=join(":",@f[0..($#f-1)]);
+      print "$ctg\n";$b=0;
+      while(defined($h{$ctg.":$b"})){
+        print $h{$ctg.":$b"};
+        $b+=$bs;
+      }print "\n";
+    }
+  }
+}' > $QUERY_FN.fixed.fasta.tmp && mv $QUERY_FN.fixed.fasta.tmp $QUERY_FN.polished.fasta && \
 rm -f _iter*_$QUERY_FN.batch.*.fa.fixed.fa _iter*_$QUERY_FN.batch.*.fa.fixed.fa.tmp && \
 awk 'NR==1 || FNR>1' _iter*_$QUERY_FN.batch.*.fa.fix.csv |\
 awk -F ':' '{print $1" "$2}' |\
