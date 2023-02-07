@@ -71,10 +71,6 @@ def iteration(num_iter,ite,qf,query_path,k,test,fix,fout,fixedout,database,seq_d
                 if n >= 0:
                     i+=(n+1)
                     continue
-                co = mer_string.find(':')
-                if co >= 0:
-                    i+=(co+1)
-                    continue
                 match = re.match("^[ACTGactg]*$",mer_string) #other invalid characters other than N or n
                 if match is None:
                     i +=1
