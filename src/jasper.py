@@ -216,10 +216,13 @@ def handle_bad_kmers(i,qf,seq,k,wrong_kmers_count,fix,fixed_bases_list,seqname,r
         if good_before >= len(seq)-1:
             return i,seq,wrong_kmers_count,fixed_bases_list,True #break the while loop in the outer function. Switch to next seq
     #additional check for case 000...high high...000
+    if max(0,good_before-k+2)+k+k >= len(seq):
+        return max(0,good_before-k+2)+k+k,seq,wrong_kmers_list,fixed_bases_list,True #break the while loop in the outer function. Switch to next seq
     second = seq[max(0,good_before-k+2)+1:max(0,good_before-k+2)+k+1]
     k_minus_1 = seq[max(0,good_before-k+2)+k-2:max(0,good_before-k+2)+k+k-2]
     k_th =seq[max(0,good_before-k+2)+k-1:max(0,good_before-k+2)+k+k-1]
     k_plus_1 = seq[max(0,good_before-k+2)+k:max(0,good_before-k+2)+k+k]
+    
     if qf[jf.MerDNA(second).get_canonical()] < thre and qf[jf.MerDNA(k_minus_1).get_canonical()] < thre and qf[jf.MerDNA(k_th).get_canonical()] < thre  and qf[jf.MerDNA(k_plus_1).get_canonical()]>=thre:
         good_after = max(0,good_before-k+2)+k #ie good_before+2
     to_be_fixed = seq[max(0,good_before-k+2):good_after+k-1]
