@@ -16,7 +16,7 @@ def main(contigs,query_path,k,test,fix,fout,fixedout,db,thre,num_iter):
         print("Opened JF database " + db)
         global solid_thre
         global debug 
-        debug = False 
+        debug = False
         global step
         step = max(2,round(k/8))
         global user_fix_choice
@@ -40,28 +40,21 @@ def iteration(num_iter,ite,qf,query_path,k,test,fix,fout,fixedout,database,seq_d
             fixedout = os.path.split(fixedout)
             fixedout = fixedout[0]+"_iter"+str(ite-1)+"_"+fixedout[1]
             
-        print("Iteration " + str(ite))
         if ite == 0:
             seq_dict = parse_fasta(query_path)
-            print("Iteration " + str(ite) + " reading fasta done")
-
-        wrong_kmers_count = 0
         fixed_bases_list = []
         total_wrong_kmers = 0
+        wrong_kmers_count = 0
         total_kmers = 0
         fout = os.path.split(fout)
         fout = fout[0]+"_iter"+str(ite)+"_"+fout[1]
         for seqname,seq in seq_dict.items():
-            print("Working on " + seqname)
+            print("Processing " + seqname);
             total_kmers += len(seq)-k+1
             good_before = -1 #index of the last guaranteed good base before the mismatch
             i = 0 #first k mer at position 0
-            timer = 0
-            wrong_kmers_count = 0                                                                                                      
+            wrong_kmers_count = 0                                                                                                       
             while i < len(seq)-k+1:
-                timer+=1
-                if timer % 100000 == 0:
-                  print ("Processed "+ str(timer) + " bases")
                 mer_string = seq[i:k+i]
                 N = mer_string.find('N') #ignore all kmers containing non acgt bases
                 if N >= 0:
@@ -75,8 +68,9 @@ def iteration(num_iter,ite,qf,query_path,k,test,fix,fout,fixedout,database,seq_d
                 if match is None:
                     i +=1
                     continue
-
-                occurrance = qf[jf.MerDNA(mer_string).get_canonical()]
+                    
+                mer = jf.MerDNA(mer_string).get_canonical()
+                occurrance = qf[mer]
                 rolling_thre = 0
                 if occurrance < solid_thre:
                     if debug:
@@ -105,7 +99,8 @@ def iteration(num_iter,ite,qf,query_path,k,test,fix,fout,fixedout,database,seq_d
                         i+=k-1
                     
                 else: #good  kmer
-                    i += k-1  
+                    i += k-1
+            
                     
             seq_dict[seqname]=seq
             total_wrong_kmers += wrong_kmers_count
@@ -161,20 +156,10 @@ def handle_bad_kmers(i,qf,seq,k,wrong_kmers_count,fix,fixed_bases_list,seqname,r
        thre =  rolling_thre 
         
     j = i-1
-    match = re.match("^[ACTGactg]*$",seq[j:k+j])
-    if match is None:
-        return i+1,seq,wrong_kmers_count,fixed_bases_list,False        
-    else:
-        occurrance = qf[jf.MerDNA(seq[j:k+j]).get_canonical()] 
-
+    occurrance = qf[jf.MerDNA(seq[j:k+j]).get_canonical()] 
     while occurrance < thre and j>=0:
         j = j-1
-        match = re.match("^[ACTGactg]*$",seq[j:k+j])
-        if match is None:
-            return i+1,seq,wrong_kmers_count,fixed_bases_list,False
-        else:
-            occurrance = qf[jf.MerDNA(seq[j:k+j]).get_canonical()]
-
+        occurrance = qf[jf.MerDNA(seq[j:k+j]).get_canonical()]
     good_before = j+k-1 #the right base of a good kmer
     prev_good_count = qf[jf.MerDNA(seq[j:k+j]).get_canonical()]
     kmer_count = qf[jf.MerDNA(seq[i:k+i]).get_canonical()]                                                            
@@ -213,7 +198,7 @@ def handle_bad_kmers(i,qf,seq,k,wrong_kmers_count,fix,fixed_bases_list,seqname,r
             return i,seq,wrong_kmers_count,fixed_bases_list,True #break the while loop in the outer function. Switch to next seq
     #additional check for case 000...high high...000
     if max(0,good_before-k+2)+k+k >= len(seq):
-        return max(0,good_before-k+2)+k+k,seq,wrong_kmers_list,fixed_bases_list,True #break the while loop in the outer function. Switch to next seq
+        return max(0,good_before-k+2)+k+k,seq,wrong_kmers_count,fixed_bases_list,True #break the while loop in the outer function. Switch to next seq
     second = seq[max(0,good_before-k+2)+1:max(0,good_before-k+2)+k+1]
     k_minus_1 = seq[max(0,good_before-k+2)+k-2:max(0,good_before-k+2)+k+k-2]
     k_th =seq[max(0,good_before-k+2)+k-1:max(0,good_before-k+2)+k+k-1]
@@ -317,11 +302,10 @@ def fixing_sid(seq,to_be_fixed,k,threshold,qf,num_below_thres_kmers,good_before,
                         seq = seq[:max(0,good_before-k+2)]+fixed_subseq+seq[good_after+k-1:]
                         fixed_base = removed_base
 
-        elif num_below_thres_kmers > k and num_below_thres_kmers < k+12: #two or more nearby errors.
+        elif num_below_thres_kmers > k: #two or more nearby errors.
             good_kmer_before = seq[good_before-k+1:good_before+1] 
             good_k_mer_after = seq[good_after:good_after+k] 
             fixed_seq = base_extension(len(to_be_fixed),qf,k,good_kmer_before,good_k_mer_after,threshold)
-            
             if fixed_seq != None:
                 fixed_ind = []
                 fixed_base = []
@@ -556,7 +540,7 @@ def base_extension(len_seq_to_be_fixed,qf,k,good_kmer_before,good_k_mer_after,th
     bases = ["A", "C", "G", "T"]
     start_km1 = good_kmer_before[0:k-1]   # store the k-1 bases in a variable no need to carry these around
     min_overlap = 5
-    for slack in range(2,9,6):
+    for slack in range(2,11,4):
         paths = [] # array of all possible extensions
         max_ext = int((len_seq_to_be_fixed - 2*k)*1.2) + min_overlap + slack
         min_patch_len = len_seq_to_be_fixed - 2*k - slack                                                                                     
