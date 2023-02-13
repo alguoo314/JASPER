@@ -51,7 +51,7 @@ def iteration(num_iter,ite,qf,query_path,k,test,fix,fout,fixedout,database,seq_d
             total_kmers += len(seq)-k+1
             good_before = -1 #index of the last guaranteed good base before the mismatch
             i = 0 #first k mer at position 0
-            wrong_kmers_count = 0                                                                                            
+            wrong_kmers_count = 0                                                                                                       
             while i < len(seq)-k+1:
                 mer_string = seq[i:k+i]
                 N = mer_string.find('N') #ignore all kmers containing non acgt bases
@@ -299,7 +299,7 @@ def fixing_sid(seq,to_be_fixed,k,threshold,qf,num_below_thres_kmers,good_before,
                         seq = seq[:max(0,good_before-k+2)]+fixed_subseq+seq[good_after+k-1:]
                         fixed_base = removed_base
 
-        elif num_below_thres_kmers > k and num_below_thres_kmers < 2*k: #two or more nearby errors.
+        elif num_below_thres_kmers > k: #two or more nearby errors.
             good_kmer_before = seq[good_before-k+1:good_before+1] 
             good_k_mer_after = seq[good_after:good_after+k] 
             fixed_seq = base_extension(len(to_be_fixed),qf,k,good_kmer_before,good_k_mer_after,threshold)
