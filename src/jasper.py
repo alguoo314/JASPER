@@ -638,4 +638,4 @@ if __name__ == '__main__':
     parser.add_argument("-ff","--fixedfasta",default = "fixed_seq.fasta",help = "The path to output the fixed assembly sequences")
     parser.add_argument("-p","--passes", type=int, default = 2, help = "The number of iterations of fixing.")
     args = parser.parse_args()
-    main(args.reads,args.query,args.ksize,args.test,args.fix,args.fout,args.fixedfasta,args.db,args.threshold,args.num_passes)
+    main(args.reads,args.query,args.ksize,args.test,args.fix,args.fout,args.fixedfasta,args.db,args.threshold,args.passes)
