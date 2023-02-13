@@ -23,6 +23,7 @@ def main(contigs,query_path,k,test,fix,fout,fixedout,db,thre,num_iter,ploidy):
         user_fix_choice = fix
         solid_thre = thre #this is the threshold determined from the jellyfish histogram
         seq_dict = None
+        divisor=50
         for ite in range(num_iter+1): #num_iter rounds of fixing plus one more round to find the final q value
             query_path,seq_dict = iteration(num_iter,ite,qf,query_path,k,test,fix,fout,fixedout,db,seq_dict,divisor,ploidy)
     except:
@@ -33,7 +34,7 @@ def main(contigs,query_path,k,test,fix,fout,fixedout,db,thre,num_iter,ploidy):
          sys.exit(1)         
             
 
-def iteration(num_iter,ite,qf,query_path,k,test,fix,fout,fixedout,database,seq_dict,divisor=50,ploidy):   
+def iteration(num_iter,ite,qf,query_path,k,test,fix,fout,fixedout,database,seq_dict,divisor,ploidy):   
     try:
         if ite == num_iter:
             fix=False
