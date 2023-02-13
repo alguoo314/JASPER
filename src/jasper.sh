@@ -5,10 +5,9 @@ export PATH=$MYPATH:$PATH;
 NUM_THREADS=2
 CMD=jasper.py
 BATCH_SIZE=0
-PASSES=2
+PASSES=3
 KMER=37
 JF_SIZE=0
-PLOIDY=1
 DEBUG=false
 QUERY="random.fa"
 QUERY_FN="random.fa"
@@ -48,8 +47,7 @@ function usage {
     echo "-j, --jf=path                   Jellyfish k-mer count database file. Required if --reads is not provided"
     echo "-r|--reads=path                 File(s) containing the polishing reads. If two or more files are provided, please enclose the list with single-quotes, e.g. -r '/path_to/file1.fa /path_to/file2.fa'. Required if -j (--jf) is not provided"
     echo "-k|--kmer=uint64                k-mer size (37)"
-    echo "-n|--num_passes=uint16          Number of polishing iterations (2), not recommended to increase past 3" 
-    echo "-p|--ploidy=uint16              Genome ploidy (1), set to 2 for diploid or higher for polyploid genomes"
+    echo "-p|--num_passes=uint16          Number of polishing iterations (3), not recommended to increase much past 4" 
     echo "-h|--help                       This message"
     echo "-v|--verbose                    Verbose (False)"
     echo "-d|--debug                      Debug mode. If supplied, all intermediate output files are kept"
@@ -79,15 +77,11 @@ do
             ;;
 	-r|--reads)
 	    export READS="$2"
-	    export JF_SIZE=`stat -c%s $READS |awk '{n+=$1}END{print int(n/25)}'`
+	    export JF_SIZE=`stat -c%s $READS |awk '{n+=$1}END{print int(n/10)}'`
 	    shift
 	    ;;
-        -n|--num_passes)
+        -p|--num_passes)
             export PASSES="$2";
-            shift
-            ;;
-        -p|--ploidy)
-            export PLOIDY="$2";
             shift
             ;;
 	-k|--kmer)
@@ -142,7 +136,7 @@ if [ -z ${JF_DB+x} ];then
           log "Using existing jellyfish database $JF_DB"
         else
           log "Creating jellyfish database $JF_DB"
-          zcat -f $READS | jellyfish count -L 2 -C -s $JF_SIZE -m $KMER -o /dev/stdout -t $NUM_THREADS /dev/stdin | tee $JF_DB | jellyfish histo -t $NUM_THREADS /dev/stdin > jfhisto$KMER.csv && \
+          zcat -f $READS | jellyfish count -C -s $JF_SIZE -m $KMER -o /dev/stdout -t $NUM_THREADS /dev/stdin | tee $JF_DB | jellyfish histo -t $NUM_THREADS /dev/stdin > jfhisto$KMER.csv && \
           touch jasper.histo.success
         fi
     else
@@ -199,7 +193,7 @@ fi
 THRESH=`cat threshold.txt` && \
 log "Lower threshold for unreliable kmers is $THRESH" && \
 echo "#!/bin/bash" >run_jasper.sh && \
-echo "$MYPATH/$CMD --db $JF_DB --query \$1 --ksize $KMER -n $PASSES -p $PLOIDY --fix --fout \$1.fix.csv -ff \$1.fixed.fa.tmp --test -thre `head -n 1 threshold.txt| awk '{print $1}'` 1>jasper.out 2>jasper.err && mv _iter${LAST_IT}_\$1.fixed.fa.tmp _iter${LAST_IT}_\$1.fixed.fa" >> run_jasper.sh && \
+echo "$MYPATH/$CMD --db $JF_DB --query \$1 --ksize $KMER -p $PASSES --fix --fout \$1.fix.csv -ff \$1.fixed.fa.tmp --test -thre `head -n 1 threshold.txt| awk '{print $1}'` 1>jasper.out 2>jasper.err && mv _iter${LAST_IT}_\$1.fixed.fa.tmp _iter${LAST_IT}_\$1.fixed.fa" >> run_jasper.sh && \
 chmod 0755 run_jasper.sh && \
 cat $JF_DB > /dev/null && \
 ls $QUERY_FN.batch.*.fa | xargs -P $NUM_THREADS -I{} ./run_jasper.sh {} && \

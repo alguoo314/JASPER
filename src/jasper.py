@@ -9,11 +9,10 @@ from Bio import pairwise2
 from Bio.pairwise2 import format_alignment
 import dna_jellyfish as jf
 
-def main(contigs,query_path,k,test,fix,fout,fixedout,db,thre,num_iter,ploidy):
+def main(contigs,query_path,k,test,fix,fout,fixedout,db,thre,num_iter):
     try:
         divisor = 50
         qf  = jf.QueryMerFile(db)
-        print("Opened JF database " + db)
         global solid_thre
         global debug 
         debug = False
@@ -23,9 +22,8 @@ def main(contigs,query_path,k,test,fix,fout,fixedout,db,thre,num_iter,ploidy):
         user_fix_choice = fix
         solid_thre = thre #this is the threshold determined from the jellyfish histogram
         seq_dict = None
-        divisor=50
         for ite in range(num_iter+1): #num_iter rounds of fixing plus one more round to find the final q value
-            query_path,seq_dict = iteration(num_iter,ite,qf,query_path,k,test,fix,fout,fixedout,db,seq_dict,divisor,ploidy)
+            query_path,seq_dict = iteration(num_iter,ite,qf,query_path,k,test,fix,fout,fixedout,db,seq_dict,divisor)
     except:
          exception_type, exception_object, exception_traceback = sys.exc_info()
          line_number = exception_traceback.tb_lineno
@@ -34,7 +32,7 @@ def main(contigs,query_path,k,test,fix,fout,fixedout,db,thre,num_iter,ploidy):
          sys.exit(1)         
             
 
-def iteration(num_iter,ite,qf,query_path,k,test,fix,fout,fixedout,database,seq_dict,divisor,ploidy):   
+def iteration(num_iter,ite,qf,query_path,k,test,fix,fout,fixedout,database,seq_dict,divisor=50):   
     try:
         if ite == num_iter:
             fix=False
@@ -43,18 +41,17 @@ def iteration(num_iter,ite,qf,query_path,k,test,fix,fout,fixedout,database,seq_d
             
         if ite == 0:
             seq_dict = parse_fasta(query_path)
+        wrong_kmers_count = 0
         fixed_bases_list = []
         total_wrong_kmers = 0
-        wrong_kmers_count = 0
         total_kmers = 0
         fout = os.path.split(fout)
         fout = fout[0]+"_iter"+str(ite)+"_"+fout[1]
         for seqname,seq in seq_dict.items():
-            print("Processing " + seqname);
             total_kmers += len(seq)-k+1
             good_before = -1 #index of the last guaranteed good base before the mismatch
             i = 0 #first k mer at position 0
-            wrong_kmers_count = 0                                                                                                       
+            wrong_kmers_count = 0                                                                                            
             while i < len(seq)-k+1:
                 mer_string = seq[i:k+i]
                 N = mer_string.find('N') #ignore all kmers containing non acgt bases
@@ -76,7 +73,7 @@ def iteration(num_iter,ite,qf,query_path,k,test,fix,fout,fixedout,database,seq_d
                 if occurrance < solid_thre:
                     if debug:
                         print("Below normal threshold in " + seqname + " thresh " + str(solid_thre) + " position " +str(i))
-                    i,seq,wrong_kmers_count,fixed_bases_list,break_while_loop = handle_bad_kmers(i,qf,seq,k,wrong_kmers_count,fix,fixed_bases_list,seqname,rolling_thre,ploidy)
+                    i,seq,wrong_kmers_count,fixed_bases_list,break_while_loop = handle_bad_kmers(i,qf,seq,k,wrong_kmers_count,fix,fixed_bases_list,seqname,rolling_thre)
                     if break_while_loop:
                         break
                 
@@ -93,7 +90,7 @@ def iteration(num_iter,ite,qf,query_path,k,test,fix,fout,fixedout,database,seq_d
                     if occurrance < rolling_thre:
                         if debug:
                             print("Below rolling threshold in " + seqname + " thresh " + str(rolling_thre) + " position " +str(i))
-                        i,seq,wrong_kmers_count,fixed_bases_list,break_while_loop = handle_bad_kmers(i,qf,seq,k,wrong_kmers_count,fix,fixed_bases_list,seqname,round(k_rolling_sum/num/2),ploidy)
+                        i,seq,wrong_kmers_count,fixed_bases_list,break_while_loop = handle_bad_kmers(i,qf,seq,k,wrong_kmers_count,fix,fixed_bases_list,seqname,round(k_rolling_sum/num/2))
                         if break_while_loop:
                             break
                     else:
@@ -114,7 +111,6 @@ def iteration(num_iter,ite,qf,query_path,k,test,fix,fout,fixedout,database,seq_d
                     f.write("{} {}\n".format(total_wrong_kmers,total_kmers))
                         
             
-        
         if fix == True:
             base_fields = ['Contig', 'Base_coord', 'Original','Mutation']
             with open(fout,'w') as csvf:
@@ -151,7 +147,7 @@ def split_output(seq, num_per_line=60): #make a new line after num_per_line base
     return output
 
          
-def handle_bad_kmers(i,qf,seq,k,wrong_kmers_count,fix,fixed_bases_list,seqname,rolling_thre,ploidy):
+def handle_bad_kmers(i,qf,seq,k,wrong_kmers_count,fix,fixed_bases_list,seqname,rolling_thre):
     thre = solid_thre
     if rolling_thre > 0:
        thre =  rolling_thre 
@@ -208,13 +204,13 @@ def handle_bad_kmers(i,qf,seq,k,wrong_kmers_count,fix,fixed_bases_list,seqname,r
     if qf[jf.MerDNA(second).get_canonical()] < thre and qf[jf.MerDNA(k_minus_1).get_canonical()] < thre and qf[jf.MerDNA(k_th).get_canonical()] < thre  and qf[jf.MerDNA(k_plus_1).get_canonical()]>=thre:
         good_after = max(0,good_before-k+2)+k #ie good_before+2
     to_be_fixed = seq[max(0,good_before-k+2):good_after+k-1]
-    wrong_kmers_count+=len([*range(max(0,good_before-k+2),good_after)])
+    wrong_kmers_count += len([*range(max(0,good_before-k+2),good_after)])
     if debug:
         print("Found error in contig " + seqname + " " + to_be_fixed + " positions " + str(good_before) + " " +  str(good_after) + " bad kmers " + str(len([*range(max(0,good_before-k+2),good_after)])))
     if fix == True:
         if good_before < 0:
             return i,seq,wrong_kmers_count,fixed_bases_list,False 
-        seq,fixed_base,original,fixed_ind = fixing_sid(seq,to_be_fixed,k,thre,qf,len([*range(max(0,good_before-k+2),good_after)]),good_before,good_after,ploidy) #fix simple sub/insert/del cases
+        seq,fixed_base,original,fixed_ind = fixing_sid(seq,to_be_fixed,k,thre,qf,len([*range(max(0,good_before-k+2),good_after)]),good_before,good_after) #fix simple sub/insert/del cases
         if fixed_base != "nN":
             if rolling_thre > 0:
                 if debug:
@@ -227,7 +223,7 @@ def handle_bad_kmers(i,qf,seq,k,wrong_kmers_count,fix,fixed_bases_list,seqname,r
     return i,seq,wrong_kmers_count,fixed_bases_list,False 
 
 
-def fixing_sid(seq,to_be_fixed,k,threshold,qf,num_below_thres_kmers,good_before,good_after,ploidy): #fix sub and indel
+def fixing_sid(seq,to_be_fixed,k,threshold,qf,num_below_thres_kmers,good_before,good_after): #fix sub and indel
     try:
         fixed_base = "nN"
         original = '-'
@@ -262,47 +258,46 @@ def fixing_sid(seq,to_be_fixed,k,threshold,qf,num_below_thres_kmers,good_before,
                    seq = seq[:max(0,good_before-k+2)]+fixed_subseq+seq[good_after+k-1:]
                    fixed_ind = [inserted_index+max(0,good_before-k+2)] #inserted base at this index
                else:
-                   if ploidy > 1:
-                      left,right,l_or_r,fixed_subseq =  fixdiploid(to_be_fixed,k,threshold,qf,seq,good_before,good_after) #diploidy of two adjacent bases                           
-                      if l_or_r !=  None:
-                          if l_or_r == "s": #lefting base is changed                                                                                                        
-                              original = "s"+seq[good_after-1]
-                              fixed_base = str(left)
-                              fixed_ind = [good_after-1]
-                          else:#the righting base is changed                                                                                                                
-                              original = "s"+seq[good_before+1]
-                              fixed_base = str(right)
-                              fixed_ind = [good_before+1]
-                          seq = seq[:max(0,good_before-k+2)]+fixed_subseq+seq[good_after+k-1:]
+                   left,right,l_or_r,fixed_subseq =  fixdiploid(to_be_fixed,k,threshold,qf,seq,good_before,good_after) #diploidy of two adjacent bases                           
+                   if l_or_r !=  None:
+                       if l_or_r == "s": #lefting base is changed                                                                                                        
+                           original = "s"+seq[good_after-1]
+                           fixed_base = str(left)
+                           fixed_ind = [good_after-1]
+                       else:#the righting base is changed                                                                                                                
+                           original = "s"+seq[good_before+1]
+                           fixed_base = str(right)
+                           fixed_ind = [good_before+1]
+                       seq = seq[:max(0,good_before-k+2)]+fixed_subseq+seq[good_after+k-1:]
 
                   
         elif num_below_thres_kmers < k-1 and num_below_thres_kmers > 1 and len(to_be_fixed)>=k:#skip the good_before = -1 (ie first kmer is bad) case.
-            removed_index,removed_base,fixed_subseq = fix_same_base_del(to_be_fixed,k,threshold,qf,num_below_thres_kmers)
-            if removed_base != None: #deletion of a base
-                original = "d-"
-                fixed_ind = [removed_index+max(0,good_before-k+2)]
+            left,right,l_or_r,fixed_subseq =  fixdiploid(to_be_fixed,k,threshold,qf,seq,good_before,good_after) #diploidy
+            if l_or_r !=  None: 
+                if l_or_r == "s": #lefting base is changed
+                    original = "s"+seq[good_after-1]
+                    fixed_base = str(left)
+                    fixed_ind = [good_after-1]
+                else:#the righting base is changed
+                    original = "s"+seq[good_before+1]
+                    fixed_base = str(right)
+                    fixed_ind = [good_before+1]
                 seq = seq[:max(0,good_before-k+2)]+fixed_subseq+seq[good_after+k-1:]
-                fixed_base = removed_base
-            else:
+                
+            else: 
                 inserted_index,inserted_base,fixed_subseq = fix_same_base_insertion(to_be_fixed,k,threshold,qf,num_below_thres_kmers)
                 if inserted_base != None:
                     original = "i"+inserted_base
                     seq = seq[:max(0,good_before-k+2)]+fixed_subseq+seq[good_after+k-1:]
                     fixed_base = "-"
                     fixed_ind = [inserted_index+max(0,good_before-k+2)] #inserted base is at this index
-                elif ploidy >1:
-                    left,right,l_or_r,fixed_subseq =  fixdiploid(to_be_fixed,k,threshold,qf,seq,good_before,good_after) #diploidy
-                    if l_or_r !=  None:
-                        if l_or_r == "s": #lefting base is changed
-                            original = "s"+seq[good_after-1]
-                            fixed_base = str(left)
-                            fixed_ind = [good_after-1]
-                        else:#the righting base is changed
-                            original = "s"+seq[good_before+1]
-                            fixed_base = str(right)
-                            fixed_ind = [good_before+1]
+                else:
+                    removed_index,removed_base,fixed_subseq = fix_same_base_del(to_be_fixed,k,threshold,qf,num_below_thres_kmers)
+                    if removed_base != None: #deletion of a base
+                        original = "d-"
+                        fixed_ind = [removed_index+max(0,good_before-k+2)]
                         seq = seq[:max(0,good_before-k+2)]+fixed_subseq+seq[good_after+k-1:]
-
+                        fixed_base = removed_base
 
         elif num_below_thres_kmers > k and num_below_thres_kmers < 2*k: #two or more nearby errors.
             good_kmer_before = seq[good_before-k+1:good_before+1] 
@@ -641,7 +636,6 @@ if __name__ == '__main__':
     parser.add_argument("--fix", action='store_true', help="Output the index of fixed bases and output the new sequence")
     parser.add_argument("--fout",default = "fout.csv",help = "The path to output the index of the fixed bases." )
     parser.add_argument("-ff","--fixedfasta",default = "fixed_seq.fasta",help = "The path to output the fixed assembly sequences")
-    parser.add_argument("-n","--num_passes", type=int, default = 2, help = "The number of iterations of fixing.")
-    parser.add_argument("-p","--ploidy", type=int, default = 1, help = "Ploidy.")
+    parser.add_argument("-p","--passes", type=int, default = 2, help = "The number of iterations of fixing.")
     args = parser.parse_args()
-    main(args.reads,args.query,args.ksize,args.test,args.fix,args.fout,args.fixedfasta,args.db,args.threshold,args.num_passes,args.ploidy)
+    main(args.reads,args.query,args.ksize,args.test,args.fix,args.fout,args.fixedfasta,args.db,args.threshold,args.num_passes)
