@@ -243,6 +243,7 @@ def fixing_sid(seq,to_be_fixed,k,threshold,qf,num_below_thres_kmers,good_before,
                     fixed_base = '-'
                     fixed_ind = [good_after-1]
                     seq = seq[:max(0,good_before-k+2)]+fixed_subseq+seq[good_after+k-1:]       
+
         elif num_below_thres_kmers == k-1: #deletion or same base insertion or substitution
            removed_base,fixed_subseq = fix_del(to_be_fixed,k,threshold,qf)
            if removed_base != None: #deletion of a base
@@ -251,24 +252,24 @@ def fixing_sid(seq,to_be_fixed,k,threshold,qf,num_below_thres_kmers,good_before,
                seq = seq[:max(0,good_before-k+2)]+fixed_subseq+seq[good_after+k-1:]
                fixed_base = removed_base 
            else:
-               inserted_index,inserted_base,fixed_subseq = fix_same_base_insertion(to_be_fixed,k,threshold,qf,num_below_thres_kmers) #expensive, try last
-               if inserted_base != None:
-                   original = "i"+inserted_base
-                   fixed_base = "-"
-                   seq = seq[:max(0,good_before-k+2)]+fixed_subseq+seq[good_after+k-1:]
-                   fixed_ind = [inserted_index+max(0,good_before-k+2)] #inserted base at this index
-               else:
-                   left,right,l_or_r,fixed_subseq =  fixdiploid(to_be_fixed,k,threshold,qf,seq,good_before,good_after) #diploidy of two adjacent bases                           
-                   if l_or_r !=  None:
-                       if l_or_r == "s": #lefting base is changed                                                                                                        
-                           original = "s"+seq[good_after-1]
-                           fixed_base = str(left)
-                           fixed_ind = [good_after-1]
-                       else:#the righting base is changed                                                                                                                
-                           original = "s"+seq[good_before+1]
-                           fixed_base = str(right)
-                           fixed_ind = [good_before+1]
-                       seq = seq[:max(0,good_before-k+2)]+fixed_subseq+seq[good_after+k-1:]
+              left,right,l_or_r,fixed_subseq =  fixdiploid(to_be_fixed,k,threshold,qf,seq,good_before,good_after) #diploidy of two adjacent bases
+              if l_or_r !=  None:
+                  if l_or_r == "s": #lefting base is changed
+                      original = "s"+seq[good_after-1]
+                      fixed_base = str(left)
+                      fixed_ind = [good_after-1]
+                  else:#the righting base is changed
+                      original = "s"+seq[good_before+1]
+                      fixed_base = str(right)
+                      fixed_ind = [good_before+1]
+                  seq = seq[:max(0,good_before-k+2)]+fixed_subseq+seq[good_after+k-1:]
+              else:
+                  inserted_index,inserted_base,fixed_subseq = fix_same_base_insertion(to_be_fixed,k,threshold,qf,num_below_thres_kmers) #expensive, try last
+                  if inserted_base != None:
+                      original = "i"+inserted_base
+                      fixed_base = "-"
+                      seq = seq[:max(0,good_before-k+2)]+fixed_subseq+seq[good_after+k-1:]
+                      fixed_ind = [inserted_index+max(0,good_before-k+2)] #inserted base at this index
  
         elif num_below_thres_kmers < k-1 and num_below_thres_kmers > 1 and len(to_be_fixed)>=k:#skip the good_before = -1 (ie first kmer is bad) case.
             removed_index,removed_base,fixed_subseq = fix_same_base_del(to_be_fixed,k,threshold,qf,num_below_thres_kmers) #the cheapest, try first
@@ -363,13 +364,7 @@ def fixdiploid(seq_to_be_fixed,k,threshold,qf,full_seq,good_before,good_after):
                 if x!=left_bad and y!=right_bad:
                     continue
                 trial = seq_to_be_fixed[:len(seq_to_be_fixed)-k]+x+seq_to_be_fixed[len(seq_to_be_fixed)-k+1:k-1]+y+seq_to_be_fixed[k:]
-                #fixed = True
                 check=bases_before+trial+base_after
-                #for i in  range(len(check)-k+1):
-                #    if qf[jf.MerDNA(check[i:k+i]).get_canonical()] < threshold:
-                #        fixed  = False
-                #        break
-                #if fixed == True:
                 if check_sequence(check,qf,k,threshold):
                     left = x
                     right = y
