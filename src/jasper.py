@@ -227,7 +227,7 @@ def handle_bad_kmers(i,qf,seq,k,wrong_kmers_count,fix,fixed_bases_list,seqname,r
     return i,seq,wrong_kmers_count,fixed_bases_list,False 
 
 
-def fixing_sid(seq,to_be_fixed,k,threshold,qf,num_below_thres_kmers,good_before,good_after): #fix sub and indel
+def fixing_sid(seq,to_be_fixed,k,threshold,qf,num_below_thres_kmers,good_before,good_after,ploidy): #fix sub and indel
     try:
         fixed_base = "nN"
         original = '-'
