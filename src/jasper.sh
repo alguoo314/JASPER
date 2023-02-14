@@ -5,6 +5,7 @@ export PATH=$MYPATH:$PATH;
 NUM_THREADS=2
 CMD=jasper.py
 BATCH_SIZE=0
+MAX_BATCH_SIZE=25000000
 PASSES=2
 KMER=37
 JF_SIZE=0
@@ -151,7 +152,10 @@ fi
 
 BS=`grep -v '^>' $QUERY | tr -d '\n' |wc |awk '{print int($3/'$NUM_THREADS'*.9)}'`
 if [ $BS -gt $BATCH_SIZE ];then
-    BATCH_SIZE=$BS
+  BATCH_SIZE=$BS
+  if [ $BATCH_SIZE -gt $MAX_BATCH_SIZE ];then
+    BATCH_SIZE=$MAX_BATCH_SIZE
+  fi
 fi    
 log "Using BATCH SIZE $BATCH_SIZE"
 

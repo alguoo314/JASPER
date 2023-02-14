@@ -376,7 +376,8 @@ def fixdiploid(seq_to_be_fixed,k,threshold,qf,full_seq,good_before,good_after):
                         
                     else: #both changed not acceptable
                         continue
-                        
+                    if debug:
+                         print("Success diploid");
                     return(left,right,l_or_r,trial)
         return None,None,None,None
     except:
@@ -400,7 +401,7 @@ def fix_k_case_sub(seq_to_be_fixed,k,threshold,qf): #when number of conseuctive 
             trial = trial[:k-1]+b+trial[k:]
             if check_sequence(trial,qf,k,threshold):
                 if debug:
-                    print("Success "+ trial);
+                    print("Success substitution "+ trial);
                 return b,trial
     return None,None
                 
@@ -413,7 +414,7 @@ def fix_insert(seq_to_be_fixed,k,threshold,qf):
     seq_to_be_fixed = seq_to_be_fixed[:ind_to_be_removed] + seq_to_be_fixed[ind_to_be_removed+1:]
     if check_sequence(seq_to_be_fixed,qf,k,threshold):
             if debug:
-                print("Success "+seq_to_be_fixed)
+                print("Success insertion "+seq_to_be_fixed)
             return base_to_be_removed,seq_to_be_fixed
     return None,None
 
@@ -425,7 +426,7 @@ def fix_del(seq_to_be_fixed,k,threshold,qf):
         trial = seq_to_be_fixed[:k-1]+alt+seq_to_be_fixed[k-1:]
         if check_sequence(trial,qf,k,threshold):
             if debug:
-                print("Success "+trial)
+                print("Success deletion "+trial)
             return alt,trial
     return None,None
 
@@ -456,7 +457,7 @@ def fix_same_base_del(seq_to_be_fixed,k,threshold,qf,num_below_thres_kmers):
                 new_bad +=1
         if fixed == True:
             if debug:
-                print("Success1 " + trial)
+                print("Success same base deletion " + trial)
             return k-1,sb*inserted,trial
         if (new_bad >= current_bad):
             inserted = max_insertions
@@ -471,7 +472,7 @@ def fix_same_base_del(seq_to_be_fixed,k,threshold,qf,num_below_thres_kmers):
         trial = seq_to_be_fixed[:k-2]+alt+seq_to_be_fixed[k-2:]
         if check_sequence(trial,qf,k,threshold):
             if debug:
-                print("Success2 " + trial)
+                print("Success before first deletion " + trial)
             return k-2,alt,trial 
     return None,None,None
 
@@ -504,7 +505,7 @@ def fix_same_base_insertion(seq_to_be_fixed,k,threshold,qf,num_below_thres_kmers
                 new_bad +=1
         if (fixed == True):
             if debug:
-                print("Success1 " + seq_to_be_fixed_local)
+                print("Success same base insertion " + seq_to_be_fixed_local)
             return k-1,sb*deleted,seq_to_be_fixed_local
         if (new_bad >= current_bad):
             break
@@ -518,7 +519,7 @@ def fix_same_base_insertion(seq_to_be_fixed,k,threshold,qf,num_below_thres_kmers
         #print("trying " +trial)
         if check_sequence(trial,qf,k,threshold):
             if debug:
-                print("Success2 single deletion " + trial + " i= " + str(i) + " Length = " + str(len(seq_to_be_fixed)))
+                print("Success single base deletion " + trial + " i= " + str(i) + " Length = " + str(len(seq_to_be_fixed)))
             return i,seq_to_be_fixed[i],trial #Need further modification later because the index for the deleted base is different from case 1
     return None,None,None
 
