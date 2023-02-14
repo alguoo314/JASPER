@@ -137,7 +137,8 @@ if [ -z ${JF_DB+x} ];then
           log "Using existing jellyfish database $JF_DB"
         else
           log "Creating jellyfish database $JF_DB"
-          zcat -f $READS | jellyfish count -C -s $JF_SIZE -m $KMER -o /dev/stdout -t $NUM_THREADS /dev/stdin | tee $JF_DB | jellyfish histo -t $NUM_THREADS /dev/stdin > jfhisto$KMER.csv && \
+          zcat -f $READS | jellyfish count -C -s $JF_SIZE -m $KMER -o /dev/stdout -t $NUM_THREADS /dev/stdin | tee $JF_DB.tmp | jellyfish histo -t $NUM_THREADS /dev/stdin > jfhisto$KMER.csv && \
+          mv $JF_DB.tmp $JF_DB && \
           touch jasper.histo.success
         fi
     else
@@ -169,7 +170,8 @@ fi
 
 if [ ! -e jasper.histo.success ] || [ ! -s jfhisto$KMER.csv ];then
 log "Computing K-mer histogram"
-jellyfish histo -t $NUM_THREADS $JF_DB > jfhisto$KMER.csv && \
+jellyfish histo -t $NUM_THREADS $JF_DB > jfhisto$KMER.csv.tmp && \
+mv jfhisto$KMER.csv.tmp jfhisto$KMER.csv && \
 rm -f jasper.correct.success && \
 touch jasper.histo.success || error_exit "Computing mer counts histogram from mer_counts$KMER.jf failed, please make sure that mer_counts$KMER.jf is a valid Jellyfish mer counts file"
 fi
@@ -188,7 +190,8 @@ fi
 
 if [ ! -e jasper.correct.success ];then
 log "Polishing"
-jellyfish.py  jfhisto$KMER.csv > threshold.txt && \
+jellyfish.py  jfhisto$KMER.csv > threshold.txt.tmp && \
+mv threshold.txt.tmp threshold.txt
 
 if ! [ -s threshold.txt ]; then
 error_exit "Local min of kmer counts is smaller than 4. The input read data is not suitable for polishing."
