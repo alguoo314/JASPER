@@ -343,8 +343,8 @@ def fixdiploid(seq_to_be_fixed,k,threshold,qf,full_seq,good_before,good_after):
     #for fixing the first base of the last k-mer in L we also need to check the kmers before that contains this base.
     # for fixing the last b of first kmer in L we also need to check if the kmer starting at good_after is good still
     try:
-        if threshold > solid_thre: #We dont use complicated fixing method on kmers below the rolling threshold 
-            return None,None,None,None
+        #if threshold > solid_thre: #We dont use complicated fixing method on kmers below the rolling threshold 
+        #    return None,None,None,None
         left_bad = seq_to_be_fixed[len(seq_to_be_fixed)-k]
         right_bad = seq_to_be_fixed[k-1]
         left = left_bad
@@ -457,7 +457,7 @@ def fix_same_base_del(seq_to_be_fixed,k,threshold,qf,num_below_thres_kmers):
                 new_bad +=1
         if fixed == True:
             if debug:
-                print("Success same base deletion " + trial)
+                print("Success same_base_deletion " + trial)
             return k-1,sb*inserted,trial
         if (new_bad >= current_bad):
             inserted = max_insertions
@@ -472,7 +472,7 @@ def fix_same_base_del(seq_to_be_fixed,k,threshold,qf,num_below_thres_kmers):
         trial = seq_to_be_fixed[:k-2]+alt+seq_to_be_fixed[k-2:]
         if check_sequence(trial,qf,k,threshold):
             if debug:
-                print("Success before first deletion " + trial)
+                print("Success before_first_deletion " + trial)
             return k-2,alt,trial 
     return None,None,None
 
@@ -505,7 +505,7 @@ def fix_same_base_insertion(seq_to_be_fixed,k,threshold,qf,num_below_thres_kmers
                 new_bad +=1
         if (fixed == True):
             if debug:
-                print("Success same base insertion " + seq_to_be_fixed_local)
+                print("Success same_base_insertion " + seq_to_be_fixed_local)
             return k-1,sb*deleted,seq_to_be_fixed_local
         if (new_bad >= current_bad):
             break
@@ -514,28 +514,26 @@ def fix_same_base_insertion(seq_to_be_fixed,k,threshold,qf,num_below_thres_kmers
             continue
     if debug:
         print("Let's try to delete a single base within a window of len(seq_to_be_fixed)-k and len(seq_to_be_fixed)")
-    for i in range(len(seq_to_be_fixed)-k,len(seq_to_be_fixed)):
+    for i in range(len(seq_to_be_fixed)-k,len(seq_to_be_fixed)-1):
         trial = seq_to_be_fixed[:i]+seq_to_be_fixed[i+1:]
         #print("trying " +trial)
         if check_sequence(trial,qf,k,threshold):
             if debug:
-                print("Success single base deletion " + trial + " i= " + str(i) + " Length = " + str(len(seq_to_be_fixed)))
+                print("Success single_base_deletion " + trial + " i= " + str(i) + " Length = " + str(len(seq_to_be_fixed)))
             return i,seq_to_be_fixed[i],trial #Need further modification later because the index for the deleted base is different from case 1
     return None,None,None
 
 
 def base_extension(len_seq_to_be_fixed,qf,k,good_kmer_before,good_k_mer_after,threshold):
-    if threshold > solid_thre: #We dont use complicated fixing method on kmers below the rolling threshold 
-        return None
-    if len(good_kmer_before) < k or len(good_k_mer_after) < k:
+    if len(good_kmer_before) < k or len(good_k_mer_after) < k or threshold > solid_thre:#We dont use complicated fixing method on kmers below the rolling threshold 
         return None
     bases = ["A", "C", "G", "T"]
     start_km1 = good_kmer_before[0:k-1]   # store the k-1 bases in a variable no need to carry these around
     min_overlap = 5
-    for slack in range(2,9,6):
+    for slack in range(10,11,1):
         paths = [] # array of all possible extensions
-        max_ext = int((len_seq_to_be_fixed - 2*k)*1.2) + min_overlap + slack
-        min_patch_len = len_seq_to_be_fixed - 2*k - slack                                                                                     
+        max_ext = round((len_seq_to_be_fixed - 2*k)*1.2) + min_overlap + slack
+        min_patch_len = round((len_seq_to_be_fixed - 2*k)/1.2) - slack                                                                                     
         paths.append(good_kmer_before[k-1:k])  # the last base of the initial k-mer makes the first path 
         if debug:
             print("Looking for a path "+str(len_seq_to_be_fixed) + " " + str(min_patch_len) +" "+ start_km1 + " " + paths[0] + " "+good_kmer_before+ " " +good_k_mer_after)
@@ -569,11 +567,11 @@ def base_extension(len_seq_to_be_fixed,qf,k,good_kmer_before,good_k_mer_after,th
                                 if check_sequence(path_connected,qf,k,threshold):
                                     if i == min_overlap:
                                         if debug:
-                                            print("Success path "+ start_km1 + paths[p]+ bases[j] + " target " + good_k_mer_after + " patch empty ")
+                                            print("Success path "+ start_km1 + paths[p]+ bases[j] + " slack " + str(slack) + " patch empty ")
                                         return None
                                     else:
                                         if debug:
-                                            print("Success path "+ start_km1 + paths[p]+ bases[j] + " target " + good_k_mer_after + " patch "+ (paths[p]+bases[j])[1:-min_overlap])
+                                            print("Success path "+ start_km1 + paths[p]+ bases[j] + " slack " + str(slack) + " patch "+ (paths[p]+bases[j])[1:-min_overlap])
                                         return return_path 
                         if path_ext_count == 0:  # first extension -- extend the current path                                                                                 
                              paths[p] += bases[j]
@@ -599,6 +597,19 @@ def check_sequence(trial,qf,k,threshold):
                     fixed  = False
                     break
     return fixed
+
+def count_bad_kmers_step(trial,qf,k,threshold):
+    bad_kmers=0
+    #we have to do this many times, so this function must be optimal
+    #we first check the first and the last k-mer and then check in the middle skipping every "step" k-mers
+    if qf[jf.MerDNA(trial[:k]).get_canonical()] < threshold:
+        bad_kmers+=1
+    if qf[jf.MerDNA(trial[-k:]).get_canonical()] < threshold:
+        bad_kmers+=1
+    for i in  range(step,len(trial)-k,step):
+        if qf[jf.MerDNA(trial[i:k+i]).get_canonical()] < threshold:
+            bad_kmers+=1
+    return bad_kmers
 
 
 def parse_fasta(query_file):
