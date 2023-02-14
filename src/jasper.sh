@@ -123,29 +123,6 @@ if [ ! -s $QUERY ];then
 error_exit "The query file does not exist. Please supply a valid fasta file to be polished with -a option."
 fi
 
-#Create database if the reads file is given instead of a database file                                       
-if [ -z ${JF_DB+x} ];then
-    if [ -n ${READS+x} ];then
-	for filename in $READS
-	do
-	    if  [ ! -s $filename ];then
-		error_exit "The reads file  $filename does not exist. Please supply a series of valid reads files separated by space and wrapped in one pair of quotation marks."
-	     fi
-	done
-        JF_DB="mer_counts$KMER.jf"
-        if [ -s $JF_DB ];then
-          log "Using existing jellyfish database $JF_DB"
-        else
-          log "Creating jellyfish database $JF_DB"
-          zcat -f $READS | jellyfish count -C -s $JF_SIZE -m $KMER -o /dev/stdout -t $NUM_THREADS /dev/stdin | tee $JF_DB.tmp | jellyfish histo -t $NUM_THREADS /dev/stdin > jfhisto$KMER.csv && \
-          mv $JF_DB.tmp $JF_DB && \
-          touch jasper.histo.success
-        fi
-    else
-        error_exit "Either a jf database or files of polishing reads must be provided in the argument."
-    fi
-fi
-
 if ! [[ $BATCH_SIZE =~ ^[0-9]+$ ]];then
     log "BATCH SIZE supplied is not a positive integer. Calculating BATCH SIZE from QUERY SIZE"
     BATCH_SIZE=0
@@ -168,14 +145,6 @@ if ! [[ $(($KMER-1)) =~ ^[0-9]+$ ]];then
 error_exit "The k-mer size supplied by -k must be a positive integer"
 fi
 
-if [ ! -e jasper.histo.success ] || [ ! -s jfhisto$KMER.csv ];then
-log "Computing K-mer histogram"
-jellyfish histo -t $NUM_THREADS $JF_DB > jfhisto$KMER.csv.tmp && \
-mv jfhisto$KMER.csv.tmp jfhisto$KMER.csv && \
-rm -f jasper.correct.success && \
-touch jasper.histo.success || error_exit "Computing mer counts histogram from mer_counts$KMER.jf failed, please make sure that mer_counts$KMER.jf is a valid Jellyfish mer counts file"
-fi
-
 LAST_IT=$(($PASSES-1))
 
 #create batches
@@ -186,6 +155,40 @@ perl -ane 'BEGIN{$seq="";$bs=int('$BATCH_SIZE');}{if($F[0] =~ /^>/){if(not($seq 
 perl -ane 'BEGIN{$batch_index=0;$output=0;open(FILE,">'$QUERY_FN'.batch.".$batch_index.".fa");}{if($F[0]=~/^>/){if($output>int('$BATCH_SIZE')){close(FILE);$batch_index++;open(FILE,">'$QUERY_FN'.batch.".$batch_index.".fa");$output=0;}}else{$output+=length($F[0]);}print FILE join(" ",@F),"\n";}' && \
 rm -f jasper.correct.success && \
 touch jasper.split.success || error_exit "Splitting files failed, do you have enough disk space?"
+fi
+
+#Create database if the reads file is given instead of a database file                                       
+if [ -z ${JF_DB+x} ];then
+    if [ -n ${READS+x} ];then
+        for filename in $READS
+        do
+            if  [ ! -s $filename ];then
+                error_exit "The reads file  $filename does not exist. Please supply a series of valid reads files separated by space and wrapped in one pair of quotation marks."
+             fi
+        done
+        JF_DB="mer_counts$KMER.jf"
+        if [ -s $JF_DB ];then
+          log "Using existing jellyfish database $JF_DB"
+          rm -f jasper.no_cat.success
+        else
+          log "Creating jellyfish database $JF_DB"
+          zcat -f $READS | jellyfish count -C -s $JF_SIZE -m $KMER -o /dev/stdout -t $NUM_THREADS /dev/stdin | tee $JF_DB.tmp | jellyfish histo -t $NUM_THREADS /dev/stdin > jfhisto$KMER.csv.tmp && \
+          mv $JF_DB.tmp $JF_DB && \
+          mv jfhisto$KMER.csv.tmp jfhisto$KMER.csv && \ 
+          touch jasper.no_cat.success  && \
+          touch jasper.histo.success
+        fi
+    else
+        error_exit "Either a jf database or files of polishing reads must be provided in the argument."
+    fi
+fi
+
+if [ ! -e jasper.histo.success ] || [ ! -s jfhisto$KMER.csv ];then
+log "Computing K-mer histogram"
+jellyfish histo -t $NUM_THREADS $JF_DB > jfhisto$KMER.csv.tmp && \
+mv jfhisto$KMER.csv.tmp jfhisto$KMER.csv && \
+rm -f jasper.correct.success && \
+touch jasper.histo.success || error_exit "Computing mer counts histogram from mer_counts$KMER.jf failed, please make sure that mer_counts$KMER.jf is a valid Jellyfish mer counts file"
 fi
 
 if [ ! -e jasper.correct.success ];then
@@ -202,7 +205,9 @@ log "Lower threshold for unreliable kmers is $THRESH" && \
 echo "#!/bin/bash" >run_jasper.sh && \
 echo "$MYPATH/$CMD --db $JF_DB --query \$1 --ksize $KMER -p $PASSES --fix --fout \$1.fix.csv -ff \$1.fixed.fa.tmp --test -thre `head -n 1 threshold.txt| awk '{print $1}'` 1>jasper.out 2>jasper.err && mv _iter${LAST_IT}_\$1.fixed.fa.tmp _iter${LAST_IT}_\$1.fixed.fa" >> run_jasper.sh && \
 chmod 0755 run_jasper.sh && \
-cat $JF_DB > /dev/null && \
+if [ ! -e jasper.no_cat.success ];then
+  cat $JF_DB > /dev/null 
+fi && \
 ls $QUERY_FN.batch.*.fa | xargs -P $NUM_THREADS -I{} ./run_jasper.sh {} && \
 rm -f run_jasper.sh && \
 rm -f jasper.join.success && \
