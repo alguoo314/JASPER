@@ -175,7 +175,6 @@ if [ -z ${JF_DB+x} ];then
           zcat -f $READS | jellyfish count -C -s $JF_SIZE -m $KMER -o /dev/stdout -t $NUM_THREADS /dev/stdin | tee $JF_DB.tmp | jellyfish histo -t $NUM_THREADS /dev/stdin > jfhisto$KMER.csv.tmp && \
           mv $JF_DB.tmp $JF_DB && \
           mv jfhisto$KMER.csv.tmp jfhisto$KMER.csv && \ 
-          touch jasper.no_cat.success  && \
           touch jasper.histo.success
         fi
     else
@@ -205,9 +204,7 @@ log "Lower threshold for unreliable kmers is $THRESH" && \
 echo "#!/bin/bash" >run_jasper.sh && \
 echo "$MYPATH/$CMD --db $JF_DB --query \$1 --ksize $KMER -p $PASSES --fix --fout \$1.fix.csv -ff \$1.fixed.fa.tmp --test -thre `head -n 1 threshold.txt| awk '{print $1}'` 1>jasper.out 2>jasper.err && mv _iter${LAST_IT}_\$1.fixed.fa.tmp _iter${LAST_IT}_\$1.fixed.fa" >> run_jasper.sh && \
 chmod 0755 run_jasper.sh && \
-if [ ! -e jasper.no_cat.success ];then
-  cat $JF_DB > /dev/null 
-fi && \
+cat $JF_DB > /dev/null && \
 ls $QUERY_FN.batch.*.fa | xargs -P $NUM_THREADS -I{} ./run_jasper.sh {} && \
 rm -f run_jasper.sh && \
 rm -f jasper.join.success && \
