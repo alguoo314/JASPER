@@ -592,7 +592,7 @@ def check_sequence(trial,qf,k,threshold):
         if qf[jf.MerDNA(trial[-k:]).get_canonical()] < threshold:
             fixed = False
         else:
-            for i in  range(step,len(trial)-k,step):
+            for i in  range(step-1,len(trial)-k,step):
                 if qf[jf.MerDNA(trial[i:k+i]).get_canonical()] < threshold:
                     fixed  = False
                     break
@@ -606,7 +606,7 @@ def count_bad_kmers_step(trial,qf,k,threshold):
         bad_kmers+=1
     if qf[jf.MerDNA(trial[-k:]).get_canonical()] < threshold:
         bad_kmers+=1
-    for i in  range(step,len(trial)-k,step):
+    for i in  range(step-1,len(trial)-k,step):
         if qf[jf.MerDNA(trial[i:k+i]).get_canonical()] < threshold:
             bad_kmers+=1
     return bad_kmers
