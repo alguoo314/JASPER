@@ -48,7 +48,7 @@ To run JASPER, execute <PATH>/bin/jasper.sh with the following options:\
 -j --jf                          Path to the jellyfish database file. Required if --reads is not provided
 -r --reads                       Path to the file(s) containing the reads to construct a jellyfish database. If two or more files are provided, please enclose the list with single-quotes, e.g. -r '/path_to/file1.fastq /path_to/file2.fastq'. Both fasta and fastq formats are acceptable. Required if --jf is not provided.
 -k, --kmer=uint64                k-mer size (37)
--p, --num_passes=utint16         The number of iterations of running jasper for fixing (2). A number smaller than 6 is usually more than sufficient
+-p, --num_passes=utint16         The number of iterations of running jasper for fixing (2). A number smaller than 4 is usually more than sufficient
 -h, --help                       This message
 -v, --verbose                    Output information (False)
 -d. --debug                      Debug mode. If supplied, all the _iter*batch*csv and _iter*batch*fa.temp files will be kept for debugging 
