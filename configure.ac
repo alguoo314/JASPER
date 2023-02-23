@@ -5,7 +5,7 @@ AC_INIT([jasper], [1.0.2], [jguo54@jhu.edu])
 AC_CONFIG_AUX_DIR([build-aux])
 AM_SILENT_RULES([yes])
 # TODO: test.hpp may need to change to actual file
-AC_CONFIG_SRCDIR([src/test.hpp]) 
+AC_CONFIG_SRCDIR([src/]) 
 AC_CONFIG_HEADERS([config.h])
 AC_CONFIG_MACRO_DIR([m4])
 AM_INIT_AUTOMAKE([subdir-objects])
