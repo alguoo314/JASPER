@@ -3,7 +3,7 @@ import sys
 import csv
 import math
 csv_file = sys.argv[1]
-count = math.inf
+count = 10000000
 threshold = 0
 with open(csv_file,'r') as histo:
     csvreader = csv.reader(histo,delimiter=' ')
