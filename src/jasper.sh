@@ -171,7 +171,8 @@ if [ -z ${JF_DB+x} ];then
           log "Using existing jellyfish database $JF_DB"
           rm -f jasper.no_cat.success
         else
-          log "Creating jellyfish database $JF_DB"
+            log "Creating jellyfish database $JF_DB"
+	    JF_SIZE=$(echo "$JF_SIZE" | awk '{ printf "%.0f", $1 }')
           zcat -f $READS | jellyfish count -C -s $JF_SIZE -m $KMER -o /dev/stdout -t $NUM_THREADS /dev/stdin | tee $JF_DB | jellyfish histo -t $NUM_THREADS /dev/stdin > jfhisto$KMER.csv.tmp && \
           mv jfhisto$KMER.csv.tmp jfhisto$KMER.csv && \ 
           touch jasper.no_cat.success  && \
