@@ -5,6 +5,7 @@ JASPER (Jellyfish based Assembly Sequence Polisher for Error Reduction) is an ef
 ## Dependencies
 * Python 3
 * Jellyfish version 2 or above (https://github.com/gmarcais/Jellyfish)
+* Biopython (https://biopython.org/)
 
 ## Installation
 To install, please download the latest release tarball from the Releases section, and use "tar -xzf" to unpack the archive.  Then cd to the resulting folder and run ./configure --prefix=$PWD && make install.  For example:
