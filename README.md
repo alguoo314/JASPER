@@ -10,8 +10,8 @@ JASPER (Jellyfish based Assembly Sequence Polisher for Error Reduction) is an ef
 ## Installation
 To install, please download the latest release tarball from the Releases section, and use "tar -xzf" to unpack the archive.  Then cd to the resulting folder and run ./configure --prefix=$PWD && make install.  For example:
 ```shell
-tar -xzf jasper-1.0.2.tar.gz
-cd jasper-1.0.2
+tar -xzf jasper-1.0.3.tar.gz
+cd jasper-1.0.3
 ./configure --prefix=$PWD
 make install
 ```
