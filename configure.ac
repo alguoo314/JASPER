@@ -17,8 +17,8 @@ AM_INIT_AUTOMAKE([subdir-objects])
 AC_PROG_CXX
 
 # Check for yaggo
-AC_ARG_VAR([YAGGO], [Yaggo switch parser generator])
-AS_IF([test "x$YAGGO" = "x"], [AC_PATH_PROG([YAGGO], [yaggo], [false])])
+#AC_ARG_VAR([YAGGO], [Yaggo switch parser generator])
+#AS_IF([test "x$YAGGO" = "x"], [AC_PATH_PROG([YAGGO], [yaggo], [false])])
 
 
 # Checks for libraries.

@@ -2,6 +2,7 @@
 MYPATH="`dirname \"$0\"`"
 MYPATH="`( cd \"$MYPATH\" && pwd )`"
 export PATH=$MYPATH:$PATH;
+export PYTHONPATH=$PYTHONPATH
 NUM_THREADS=2
 CMD=jasper.py
 BATCH_SIZE=0
