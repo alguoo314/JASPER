@@ -2,7 +2,14 @@
 
 JASPER (Jellyfish based Assembly Sequence Polisher for Error Reduction) is an efficient polishing tool for draft genomes.  It uses accurate reads (PacBio HiFi or Illumina) to evaluate consensus quality and correct consensus errors in genome assemblies.  JASPER is substantially faster than polishing methods based on sequence alignment, and more accurate than currently available k-mer based methods.  The efficiency and scalability of JASPER allows one to use it to create personalized reference genomes for specific populations very efficiently, even for large sequenced populations, by polishing the reference genome, such as GRCh38 or chm13v2.0 for human, with Illumina reads sequenced from many individuals from the population. 
 
-### Note: This version of JASPER does not install Jellyfish. Please visit the repo "JASPER_integrated_release" for the automatic installation and binding of Jellyfish.
+### Note: This version of JASPER does not install Jellyfish, a required dependency. For convenience we created an integrated version that includes all required dependencies.  You can install it from here: https://github.com/alekseyzimin/JASPER_release/releases
+To install, download the release tarball JASPER-v1.0.4.tar.gz and then run:
+```
+tar xzf JASPER-v1.0.4.tar.gz
+cd JASPER-v1.0.4
+./install.sh
+```
+This will compule jellyfish and configure and install JASPER.  You can then run JASPER from /path_to/JASPER-v1.0.4/bin/jasper.sh. 
 
 ## Dependencies
 * Python 3
